@@ -32,7 +32,7 @@ const Importer = (() => {
     if (!Array.isArray(meta.cards) || meta.cards.length === 0) throw new Error('В deck.json нет карточек');
     if (meta.format && meta.format > DECK_FORMAT_VERSION) throw new Error('Колода сделана более новой версией скрипта');
     meta.cards.forEach((c, i) => {
-      if (!c || (!c.en && !c.ru)) throw new Error(`Карточка №${i + 1}: нет текста`);
+      if (!c || (!c.en && !c.ru && !c.text)) throw new Error(`Карточка №${i + 1}: нет текста`);
     });
   }
 
@@ -50,10 +50,13 @@ const Importer = (() => {
       if (!image) missing.push(cardId);
       cards.push({
         key: `${deckId}/${cardId}`, deckId, idx: i, image,
-        ru: String(c.ru || '').trim(), en: String(c.en || '').trim(), prompt: String(c.prompt || '').trim(),
+        ru: String(c.ru || c.text || '').trim(), en: String(c.en || '').trim(), prompt: String(c.prompt || '').trim(),
       });
     }
-    return { deck: { id: deckId, title, cardCount: cards.length, coverKey: (cards.find((c) => c.image) || cards[0]).key }, cards, missing };
+    const type = meta.type === 'poem' ? 'poem' : 'words';
+    const deck = { id: deckId, title, type, author: String(meta.author || '').trim(), cardCount: cards.length,
+      coverKey: (cards.find((c) => c.image) || cards[0]).key };
+    return { deck, cards, missing };
   }
 
   // ──── Чтение колоды из уже открытого архива ────
@@ -184,7 +187,9 @@ const Importer = (() => {
       }
       list.push({ id: cid, ru: c.ru, en: c.en, prompt: c.prompt || '', image });
     }
-    folder.file('deck.json', JSON.stringify({ format: DECK_FORMAT_VERSION, id: deck.id, title: deck.title, cards: list }, null, 2));
+    const meta = { format: DECK_FORMAT_VERSION, id: deck.id, title: deck.title, cards: list };
+    if (deck.type === 'poem') { meta.type = 'poem'; meta.author = deck.author || ''; }
+    folder.file('deck.json', JSON.stringify(meta, null, 2));
   }
 
   async function exportDeck(deckId) {
@@ -202,7 +207,7 @@ const Importer = (() => {
     const decks = await DB.all('decks');
     for (const d of decks) await addDeckToZip(zip.folder(`decks/${d.id}`), d);
     const data = { format: BACKUP_FORMAT_VERSION, app: APP_VERSION, created: new Date().toISOString(),
-      profiles: await DB.all('profiles'), progress: await DB.all('progress') };
+      profiles: await DB.all('profiles'), progress: await DB.all('progress'), poemProgress: await DB.all('poemProgress') };
     zip.file('backup.json', JSON.stringify(data));
     const blob = await zip.generateAsync({ type: 'blob' });
     downloadBlob(blob, `cards-backup-${new Date().toLocaleDateString('sv')}.zip`);
@@ -228,6 +233,7 @@ const Importer = (() => {
       const data = JSON.parse(await bEntry.async('string'));
       if (Array.isArray(data.profiles)) await DB.putMany('profiles', data.profiles);
       if (Array.isArray(data.progress)) await DB.putMany('progress', data.progress);
+      if (Array.isArray(data.poemProgress)) await DB.putMany('poemProgress', data.poemProgress);
       await loadProfiles();
       toast(`Восстановлено колод: ${metas.length}`);
       return true;

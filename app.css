@@ -262,3 +262,32 @@ a.btn { text-decoration: none; color: inherit; }
 .tp-grid button.on { background: var(--accent); color: var(--accent-ink); }
 .tp-fine { display: flex; justify-content: center; gap: 24px; margin-top: 10px; }
 .tp-fine button { color: var(--accent-text); font-weight: 600; padding: 6px 4px; }
+
+/* ──── Действия с колодой ──── */
+.deck-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: -4px 0 6px; }
+.deck-actions button { padding: 8px 12px; border-radius: 12px; background: var(--surface); font-size: .85em; font-weight: 600; box-shadow: var(--shadow); }
+.deck-actions .del { color: var(--bad); }
+
+/* ──── Стихи ──── */
+.poem-stars { margin-top: 6px; font-size: .9em; letter-spacing: 1px; }
+.poem-due { margin-top: 4px; font-size: .8em; font-weight: 700; color: var(--accent-text); }
+.mode-ico { font-size: 1.6em; width: 34px; text-align: center; }
+.mode-star { font-size: 1.3em; }
+.poem-full { white-space: pre-wrap; font-size: 1.15em; line-height: 1.6; margin-bottom: 8px; }
+.poem-card .back { justify-content: flex-start; }
+.poem-lines { font-size: 1.3em; line-height: 1.55; font-weight: 600; text-align: left; }
+.face.back .poem-lines { margin-top: 18px; text-align: center; color: #2a2622; }
+.poem-lines.small { font-size: .82em; line-height: 1.35; font-weight: 500; margin-top: 6px; }
+.poem-lines.letters { letter-spacing: .25em; color: var(--accent-text); }
+mark.rhyme { background: #fff3b0; color: inherit; border-radius: 4px; padding: 0 2px; }
+.poem-task { font-size: 1.1em; margin: 4px 0 14px; }
+.poem-strip, .poem-table { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.poem-cell { position: relative; display: flex; flex-direction: column; justify-content: flex-start; align-self: start; text-align: left; }
+.poem-cell > span { position: absolute; top: 6px; left: 6px; background: rgba(255,255,255,.9); color: #2a2622;
+  border-radius: 50%; width: 26px; height: 26px; display: grid; place-items: center; font-weight: 800; font-size: .85em; }
+.poem-pic { aspect-ratio: 1; border-radius: 16px; background: #ddd center/cover no-repeat; box-shadow: var(--shadow); }
+.poem-row { display: flex; gap: 12px; align-items: center; padding: 10px; margin-bottom: 10px; width: 100%; text-align: left; }
+.poem-thumb { width: 64px; height: 64px; flex: none; border-radius: 12px; background: #ddd center/cover no-repeat; }
+.poem-row .poem-lines { font-size: 1.05em; }
+.blank { display: inline-block; min-width: 1.5em; border-bottom: 2px solid var(--accent-text); background: var(--accent-soft); border-radius: 4px; cursor: pointer; }
+.blank.peek { border-bottom-style: dashed; background: #fff3b0; color: #2a2622; }

@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="70%">
+      <stop offset="0" stop-color="#16406e"/>
+      <stop offset="0.55" stop-color="#0b2346"/>
+      <stop offset="1" stop-color="#050f22"/>
+    </radialGradient>
+    <radialGradient id="halo" cx="50%" cy="40%" r="50%">
+      <stop offset="0" stop-color="#7fe9ff" stop-opacity="0.55"/>
+      <stop offset="0.5" stop-color="#3fb8ff" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#3fb8ff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.22"/>
+      <stop offset="0.5" stop-color="#bff4ff" stop-opacity="0.06"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0.14"/>
+    </linearGradient>
+    <linearGradient id="base" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#d9e4ee"/>
+      <stop offset="0.5" stop-color="#8a9aac"/>
+      <stop offset="1" stop-color="#5b6878"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="4" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="softglow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="10"/>
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <circle cx="256" cy="210" r="210" fill="url(#halo)"/>
+
+  <!-- колба -->
+  <path d="M256 70 C 164 70 104 136 104 214 C 104 270 136 306 164 334 C 182 352 190 368 192 392 L 320 392 C 322 368 330 352 348 334 C 376 306 408 270 408 214 C 408 136 348 70 256 70 Z"
+        fill="url(#glass)" stroke="#bff4ff" stroke-opacity="0.75" stroke-width="5"/>
+
+  <!-- мозг: свечение -->
+  <g filter="url(#softglow)" opacity="0.85">
+    <path d="M256 128 C 222 112 180 124 168 158 C 146 166 140 196 152 214 C 140 236 152 264 176 268 C 186 290 218 296 236 282 C 246 294 256 296 256 296 C 256 296 266 294 276 282 C 294 296 326 290 336 268 C 360 264 372 236 360 214 C 372 196 366 166 344 158 C 332 124 290 112 256 128 Z" fill="#41c8ff"/>
+  </g>
+  <!-- мозг: контур и извилины -->
+  <g filter="url(#glow)" fill="none" stroke="#c9f6ff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M256 128 C 222 112 180 124 168 158 C 146 166 140 196 152 214 C 140 236 152 264 176 268 C 186 290 218 296 236 282 C 246 294 256 296 256 296 C 256 296 266 294 276 282 C 294 296 326 290 336 268 C 360 264 372 236 360 214 C 372 196 366 166 344 158 C 332 124 290 112 256 128 Z"/>
+    <path d="M256 128 L 256 296" stroke-opacity="0.9"/>
+    <path d="M212 140 C 214 158 230 166 236 182 C 242 198 226 210 230 226"/>
+    <path d="M176 180 C 196 180 204 196 222 196"/>
+    <path d="M168 230 C 186 222 204 236 214 254"/>
+    <path d="M300 140 C 298 158 282 166 276 182 C 270 198 286 210 282 226"/>
+    <path d="M336 180 C 316 180 308 196 290 196"/>
+    <path d="M344 230 C 326 222 308 236 298 254"/>
+  </g>
+  <!-- нейронные точки -->
+  <g fill="#ffffff" filter="url(#glow)">
+    <circle cx="236" cy="182" r="5"/><circle cx="222" cy="196" r="4"/><circle cx="214" cy="254" r="5"/>
+    <circle cx="276" cy="182" r="5"/><circle cx="290" cy="196" r="4"/><circle cx="298" cy="254" r="5"/>
+    <circle cx="256" cy="210" r="6"/>
+  </g>
+
+  <!-- блик на стекле -->
+  <path d="M150 170 C 154 130 184 102 222 92" fill="none" stroke="#ffffff" stroke-opacity="0.55" stroke-width="9" stroke-linecap="round"/>
+
+  <!-- цоколь -->
+  <rect x="194" y="392" width="124" height="18" rx="8" fill="url(#base)"/>
+  <rect x="198" y="414" width="116" height="16" rx="8" fill="url(#base)"/>
+  <rect x="204" y="434" width="104" height="16" rx="8" fill="url(#base)"/>
+  <path d="M226 454 L 286 454 C 282 470 270 476 256 476 C 242 476 230 470 226 454 Z" fill="#4a5664"/>
+</svg>

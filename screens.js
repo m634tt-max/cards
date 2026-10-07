@@ -78,6 +78,12 @@ const Screens = {
     const view = $('#view');
     const deck = await DB.get('decks', deckId);
     if (!deck) { switchTab('library'); return; }
+    if (deck.type === 'poem') {
+      App.route = { screen: 'poem', params: { deckId } };
+      history.replaceState({ route: App.route }, '');
+      await Poems.screen(deckId);
+      return;
+    }
     $('#topTitle').textContent = deck.title;
     const [cards, recs, s] = await Promise.all([
       DB.byIndex('cards', 'deckId', deckId),
@@ -108,12 +114,18 @@ const Screens = {
         <button class="btn primary" id="btnStudy" ${todo ? '' : 'disabled'}>Учить${todo ? ` (${todo})` : ''}</button>
         <button class="btn" id="btnBrowse">Просмотр всех</button>
       </div>
+      <div class="deck-actions">
+        <button id="btnDeckMenu">✏️ Изменить</button>
+        <button id="btnDeckExport">📤 Выгрузить</button>
+        <button id="btnDeckDelete" class="del">🗑 Удалить колоду</button>
+      </div>
       <div class="section-title">Карточки · ⚪ новая 🟡 учу 🟢 выучена</div>
-      <div class="panel">${rows}</div>
-      <div class="btn-row"><button class="btn" id="btnDeckMenu">Действия с колодой…</button></div>`;
+      <div class="panel">${rows}</div>`;
     $('#btnStudy').onclick = () => navigate('study', { deckIds: [deckId], mode: 'srs' });
     $('#btnBrowse').onclick = () => navigate('study', { deckIds: [deckId], mode: 'browse' });
     $('#btnDeckMenu').onclick = () => Screens.deckMenu(deck);
+    $('#btnDeckExport').onclick = () => Importer.exportDeck(deck.id).catch((e) => reportError('export', e));
+    $('#btnDeckDelete').onclick = () => Screens.deleteDeck(deck);
     if (noImg) $('#btnAddImages').onclick = () => navigate('images', { deckId });
     view.querySelectorAll('[data-card]').forEach((b) => {
       b.onclick = () => Screens.editCard(cards.find((c) => c.key === b.dataset.card));
@@ -146,12 +158,17 @@ const Screens = {
       toast('Прогресс сброшен');
       render();
     };
-    $('#btnDel').onclick = async () => {
-      if (!(await confirmSheet('Удалить колоду?', 'Карточки и прогресс всех профилей будут удалены.', 'Удалить', true))) return;
-      await DB.deleteDeck(deck.id);
-      toast('Колода удалена');
-      switchTab('library');
-    };
+    $('#btnDel').onclick = () => Screens.deleteDeck(deck);
+  },
+
+  // ──── Удаление колоды с подтверждением ────
+  async deleteDeck(deck) {
+    const ok = await confirmSheet(`Удалить «${deck.title}»?`,
+      `${cardsWord(deck.cardCount)}, картинки и прогресс всех профилей будут удалены. Отменить нельзя.`, 'Удалить', true);
+    if (!ok) return;
+    await DB.deleteDeck(deck.id);
+    toast(deck.type === 'poem' ? 'Стих удалён' : 'Колода удалена');
+    switchTab(deck.type === 'poem' ? 'poems' : 'library');
   },
 
   // ──── Редактирование карточки ────

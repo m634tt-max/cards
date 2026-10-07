@@ -3,10 +3,11 @@
 // decks    : { id, title, cardCount, coverKey, createdAt }
 // cards    : { key: "<deckId>/<cardId>", deckId, idx, ru, en, image: Blob }
 // profiles : { id, name, emoji, kid, reverse, autoSpeak, createdAt }
+// poemProgress : { pk: "<profileId>|<deckId>", profileId, deckId, stars{}, reviews, nextReview, last }
 // progress : { pk: "<profileId>|<cardKey>", profileId, deckId, cardKey, due, interval, ease, reps, lapses, last }
 
 const DB_NAME = 'flashcards';
-const DB_VERSION = 1;
+const DB_VERSION = 2;   // 2 — добавлен прогресс стихов
 
 const DB = (() => {
   let dbPromise = null;
@@ -24,6 +25,7 @@ const DB = (() => {
           s.createIndex('deckId', 'deckId');
         }
         if (!db.objectStoreNames.contains('profiles')) db.createObjectStore('profiles', { keyPath: 'id' });
+        if (!db.objectStoreNames.contains('poemProgress')) db.createObjectStore('poemProgress', { keyPath: 'pk' });
         if (!db.objectStoreNames.contains('progress')) {
           const s = db.createObjectStore('progress', { keyPath: 'pk' });
           s.createIndex('profileId', 'profileId');

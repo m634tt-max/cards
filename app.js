@@ -1,6 +1,6 @@
 'use strict';
 // ──── Константы ────
-const APP_VERSION = '1.1.3';
+const APP_VERSION = '1.3.0';
 const DECK_FORMAT_VERSION = 1;
 const BACKUP_FORMAT_VERSION = 1;
 const TOAST_MS = 2600;
@@ -73,6 +73,7 @@ const Sheet = {
   after: null,
   open(html, onClose = null) {
     const wasOpen = this.isOpen();
+    $('#toast').hidden = true;   // всплывающее сообщение не должно закрывать окно
     $('#sheet').onclick = null;
     $('#sheet').innerHTML = html;
     $('#sheet').scrollTop = 0;
@@ -142,9 +143,14 @@ function applyTheme() {
 // ──── Озвучка английского ────
 const Speech = {
   voices: [],
+  ruVoices: [],
   init() {
     if (!('speechSynthesis' in window)) return;
-    const load = () => { this.voices = speechSynthesis.getVoices().filter((v) => /^en[-_]/i.test(v.lang)); };
+    const load = () => {
+      const all = speechSynthesis.getVoices();
+      this.voices = all.filter((v) => /^en[-_]/i.test(v.lang));
+      this.ruVoices = all.filter((v) => /^ru[-_]/i.test(v.lang));
+    };
     load();
     speechSynthesis.addEventListener('voiceschanged', load);
   },
@@ -162,6 +168,17 @@ const Speech = {
     const v = this.pick();
     if (v) u.voice = v;
     u.lang = v ? v.lang : 'en-US';
+    u.rate = Number(lsGet(LS_RATE, DEFAULT_RATE)) || DEFAULT_RATE;
+    speechSynthesis.speak(u);
+  },
+  // ──── Русская речь (для стихов) ────
+  sayRu(text) {
+    if (!('speechSynthesis' in window)) { toast('Озвучка не поддерживается браузером'); return; }
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    const v = this.ruVoices.find((x) => /google/i.test(x.name)) || this.ruVoices[0];
+    if (v) u.voice = v;
+    u.lang = v ? v.lang : 'ru-RU';
     u.rate = Number(lsGet(LS_RATE, DEFAULT_RATE)) || DEFAULT_RATE;
     speechSynthesis.speak(u);
   },
@@ -221,8 +238,13 @@ async function deckSummary(deck) {
   return { due, learned, fresh: Math.max(0, deck.cardCount - seen), total: deck.cardCount };
 }
 
+// Колоды слов (стихи хранятся там же, но показываются в своём разделе)
 async function loadDecks() {
-  return (await DB.all('decks')).sort((a, b) => b.createdAt - a.createdAt);
+  return (await DB.all('decks')).filter((d) => d.type !== 'poem').sort((a, b) => b.createdAt - a.createdAt);
+}
+
+async function loadPoems() {
+  return (await DB.all('decks')).filter((d) => d.type === 'poem').sort((a, b) => b.createdAt - a.createdAt);
 }
 
 async function deckCover(deck) {
@@ -231,7 +253,7 @@ async function deckCover(deck) {
 }
 
 // ──── Навигация ────
-const TAB_TITLES = { today: 'Учить', library: 'Колоды', more: 'Ещё' };
+const TAB_TITLES = { today: 'Учить', library: 'Колоды', poems: 'Стихи', more: 'Ещё' };
 
 function navigate(screen, params = {}, push = true) {
   App.route = { screen, params };
@@ -258,7 +280,7 @@ window.addEventListener('popstate', (e) => {
 async function render() {
   const { screen, params } = App.route;
   const isTab = screen in TAB_TITLES;
-  document.body.classList.toggle('studying', screen === 'study');
+  document.body.classList.toggle('studying', screen === 'study' || screen === 'poemMode');
   $('#btnBack').hidden = isTab;
   $('#btnProfile').hidden = screen === 'study';
   document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === screen));
@@ -272,5 +294,8 @@ async function render() {
     else if (screen === 'study') await Study.start(params);
     else if (screen === 'reminders') await Reminders.screen();
     else if (screen === 'images') await ImageWizard.screen(params.deckId);
+    else if (screen === 'poems') await Poems.list();
+    else if (screen === 'poem') await Poems.screen(params.deckId);
+    else if (screen === 'poemMode') await Poems.mode(params);
   } catch (err) { reportError('render', err); }
 }
