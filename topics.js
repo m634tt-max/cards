@@ -207,6 +207,7 @@ Object.assign(Topics, {
     $('#btnSpeak').onclick = () => Speech.sayRu(`${this.titleOf(c, st.i)}. ${this.points(c).join('. ') || c.ru}`);
     $('#btnPrev').onclick = () => { st.i -= 1; st.open = false; this.draw(); };
     $('#btnNext').onclick = () => { st.i += 1; st.open = false; this.draw(); };
+    attachSwipe($('#tcard'), () => $('#btnNext').click(), () => { if (st.i > 0) $('#btnPrev').click(); });
   },
 
   // 3. Вопрос-ответ с интервальным повторением
