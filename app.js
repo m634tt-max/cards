@@ -1,6 +1,6 @@
 'use strict';
 // ──── Константы ────
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.1.2';
 const DECK_FORMAT_VERSION = 1;
 const BACKUP_FORMAT_VERSION = 1;
 const TOAST_MS = 2600;
@@ -270,5 +270,7 @@ async function render() {
     else if (screen === 'more') await Screens.more();
     else if (screen === 'deck') await Screens.deck(params.deckId);
     else if (screen === 'study') await Study.start(params);
+    else if (screen === 'reminders') await Reminders.screen();
+    else if (screen === 'images') await ImageWizard.screen(params.deckId);
   } catch (err) { reportError('render', err); }
 }

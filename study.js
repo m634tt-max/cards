@@ -75,12 +75,12 @@ const Study = {
         <div class="swipe-tag right" id="tagR">${this.mode === 'browse' ? 'НАЗАД' : 'ЗНАЮ'}</div>
         <div class="card3d" id="card">
           <div class="face front">
-            <div class="pic" style="background-image:url('${url}')"></div>
+            <div class="pic ${url ? '' : 'noimg'}" style="background-image:url('${url}')"></div>
             <div class="caption">${esc(frontText)}</div>
             ${this.pos === 0 ? '<div class="tap-hint">нажмите, чтобы перевернуть</div>' : ''}
           </div>
           <div class="face back">
-            <div class="mini" style="background-image:url('${url}')"></div>
+            <div class="mini ${url ? '' : 'noimg'}" style="background-image:url('${url}')"></div>
             <div class="en">${esc(c.en)}</div>
             <div class="ru">${esc(c.ru)}</div>
             <button class="speak" id="btnSpeak" aria-label="Озвучить">

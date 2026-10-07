@@ -16,8 +16,8 @@ const Screens = {
       view.innerHTML = `
         <h2>${greeting(p)}</h2>
         <div class="empty"><div class="big">📚</div>
-          <p>Пока нет ни одной колоды.<br>Импортируйте zip-файл колоды, подготовленный скриптом.</p>
-          <button class="btn primary" id="btnImport">${PLUS} Импортировать колоду</button></div>`;
+          <p>Пока нет ни одной колоды.<br>Импортируйте файл колоды (zip или deck.json) или вставьте её текст в разделе «Ещё».</p>
+          <button class="btn import" id="btnImport">${PLUS} Импортировать колоду</button></div>`;
       $('#btnImport').onclick = async () => { if (await Importer.pickAndImport()) render(); };
       return;
     }
@@ -60,7 +60,7 @@ const Screens = {
     const tiles = decks.map((d, i) => {
       const pct = d.cardCount ? Math.round((sums[i].learned / d.cardCount) * 100) : 0;
       return `<button class="deck-tile" data-deck="${esc(d.id)}">
-        <div class="cover" style="background-image:url('${covers[i]}')"></div>
+        <div class="cover ${covers[i] ? '' : 'noimg'}" style="background-image:url('${covers[i]}')"></div>
         <div class="meta"><div class="name">${esc(d.title)}</div>
           <div class="count">${cardsWord(d.cardCount)}</div>
           <div class="bar"><i style="width:${pct}%"></i></div></div></button>`;
@@ -68,7 +68,7 @@ const Screens = {
     view.innerHTML = `
       <h2>Колоды</h2><p class="subtitle">Мои наборы для изучения</p>
       <div class="grid">${tiles}
-        <button class="add-tile" id="btnImport">${PLUS}<span>Импорт колоды</span></button></div>`;
+        <button class="add-tile import" id="btnImport">${PLUS}<span>Импорт колоды</span></button></div>`;
     $('#btnImport').onclick = async () => { const d = await Importer.pickAndImport(); if (d) navigate('deck', { deckId: d.id }); };
     view.querySelectorAll('[data-deck]').forEach((b) => { b.onclick = () => navigate('deck', { deckId: b.dataset.deck }); });
   },
@@ -89,11 +89,16 @@ const Screens = {
     const dot = { new: '⚪', learning: '🟡', learned: '🟢' };
     const rows = cards.map((c) => `
       <button class="row" data-card="${esc(c.key)}">
-        <img class="thumb" src="${imgUrl(c)}" alt="">
+        ${c.image ? `<img class="thumb" src="${imgUrl(c)}" alt="">` : '<div class="thumb thumb-empty">🖼</div>'}
         <div class="grow"><div><b>${esc(c.en)}</b></div><div class="hint">${esc(c.ru)}</div></div>
         <span>${dot[SRS.status(recMap.get(c.key))]}</span></button>`).join('');
     const todo = s.due + s.fresh;
-    view.innerHTML = `
+    const noImg = cards.filter((c) => !c.image).length;
+    const imgBanner = noImg ? `
+      <div class="panel img-banner"><div class="grow"><b>🖼 Без картинки: ${noImg}</b>
+        <div class="hint">Сгенерируйте по готовым промптам и выберите из галереи</div></div>
+        <button class="btn import" id="btnAddImages">Добавить</button></div>` : '';
+    view.innerHTML = `${imgBanner}
       <div class="stats">
         <div class="stat"><b>${s.due}</b><small>повторить</small></div>
         <div class="stat"><b>${s.fresh}</b><small>новых</small></div>
@@ -109,6 +114,7 @@ const Screens = {
     $('#btnStudy').onclick = () => navigate('study', { deckIds: [deckId], mode: 'srs' });
     $('#btnBrowse').onclick = () => navigate('study', { deckIds: [deckId], mode: 'browse' });
     $('#btnDeckMenu').onclick = () => Screens.deckMenu(deck);
+    if (noImg) $('#btnAddImages').onclick = () => navigate('images', { deckId });
     view.querySelectorAll('[data-card]').forEach((b) => {
       b.onclick = () => Screens.editCard(cards.find((c) => c.key === b.dataset.card));
     });
@@ -151,28 +157,36 @@ const Screens = {
   // ──── Редактирование карточки ────
   editCard(card) {
     let newImage = null;
+    const prompt = ImageWizard.promptOf(card);
     Sheet.open(`
       <h3>Карточка</h3>
-      <img class="edit-img" id="editImg" src="${imgUrl(card)}" alt="">
-      <button class="btn block" id="btnImg">Заменить картинку</button>
+      ${card.image ? `<img class="edit-img" id="editImg" src="${imgUrl(card)}" alt="">` : '<img class="edit-img" id="editImg" alt="">'}
+      <button class="btn block" id="btnImg">${card.image ? 'Заменить картинку' : 'Выбрать картинку'}</button>
       <label class="field" style="margin-top:12px"><span>Русский</span><textarea id="editRu" rows="2">${esc(card.ru)}</textarea></label>
       <label class="field"><span>English</span><textarea id="editEn" rows="2">${esc(card.en)}</textarea></label>
+      <label class="field"><span>Промпт для картинки</span><textarea id="editPrompt" rows="3">${esc(prompt)}</textarea></label>
       <div class="btn-row">
+        <button class="btn" id="btnCopyPrompt">📋 Промпт</button>
         <button class="btn" id="btnSay">🔊 Озвучить</button>
-        <button class="btn primary" id="btnSave">Сохранить</button>
-      </div>`);
+      </div>
+      <button class="btn primary block" id="btnSave">Сохранить</button>`);
     $('#btnSay').onclick = () => Speech.say($('#editEn').value);
+    $('#btnCopyPrompt').onclick = () => ImageWizard.copy($('#editPrompt').value);
     $('#btnImg').onclick = async () => {
       const f = await pickFile('image/*');
       if (!f) return;
-      newImage = f;
-      $('#editImg').src = URL.createObjectURL(f);
+      try {
+        newImage = await ImageWizard.compress(f);
+        $('#editImg').src = URL.createObjectURL(newImage);
+      } catch (err) { reportError('image', err); }
     };
     $('#btnSave').onclick = async () => {
       card.ru = $('#editRu').value.trim();
       card.en = $('#editEn').value.trim();
-      if (newImage) card.image = new Blob([await newImage.arrayBuffer()], { type: newImage.type || 'image/jpeg' });
+      card.prompt = $('#editPrompt').value.trim();
+      if (newImage) card.image = newImage;
       await DB.put('cards', card);
+      if (newImage) await ImageWizard.fixCover(card.deckId);
       Sheet.close();
       toast('Сохранено');
     };

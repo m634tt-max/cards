@@ -2,7 +2,8 @@
 // ──── Импорт колод и резервное копирование ────
 // Формат колоды (zip):
 //   deck.json  { "format": 1, "id": "travel", "title": "Путешествия",
-//                "cards": [ { "id": "01", "ru": "...", "en": "...", "image": "images/01.webp" } ] }
+//                "cards": [ { "id": "01", "ru": "...", "en": "...", "prompt": "...", "image": "images/01.webp" } ] }
+//   Можно импортировать и сам deck.json (без картинок) — картинки добавляются в приложении.
 //   images/... картинки (webp/jpg/png)
 
 const Importer = (() => {
@@ -35,9 +36,8 @@ const Importer = (() => {
     });
   }
 
-  // ──── Чтение колоды из уже открытого архива ────
-  async function readDeck(zip, metaEntry) {
-    const meta = JSON.parse(await metaEntry.async('string'));
+  // ──── Разбор описания колоды; getImage(path) возвращает Blob или null ────
+  async function readDeckMeta(meta, getImage) {
     validateDeck(meta);
     const title = String(meta.title || 'Без названия').trim();
     const deckId = String(meta.id || slug(title));
@@ -46,49 +46,114 @@ const Importer = (() => {
     for (let i = 0; i < meta.cards.length; i += 1) {
       const c = meta.cards[i];
       const cardId = String(c.id ?? i + 1);
-      const entry = findEntry(zip, c.image);
-      let image = null;
-      if (entry) {
-        const buf = await entry.async('arraybuffer');
-        image = new Blob([buf], { type: mimeOf(entry.name) });
-      } else {
-        missing.push(cardId);
-      }
-      cards.push({ key: `${deckId}/${cardId}`, deckId, idx: i, ru: String(c.ru || '').trim(), en: String(c.en || '').trim(), image });
+      const image = c.image ? await getImage(c.image) : null;
+      if (!image) missing.push(cardId);
+      cards.push({
+        key: `${deckId}/${cardId}`, deckId, idx: i, image,
+        ru: String(c.ru || '').trim(), en: String(c.en || '').trim(), prompt: String(c.prompt || '').trim(),
+      });
     }
     return { deck: { id: deckId, title, cardCount: cards.length, coverKey: (cards.find((c) => c.image) || cards[0]).key }, cards, missing };
   }
 
-  // ──── Сохранение колоды (с заменой старой версии, прогресс сохраняется) ────
+  // ──── Чтение колоды из уже открытого архива ────
+  async function readDeck(zip, metaEntry) {
+    const meta = JSON.parse(await metaEntry.async('string'));
+    return readDeckMeta(meta, async (path) => {
+      const entry = findEntry(zip, path);
+      if (!entry) return null;
+      return new Blob([await entry.async('arraybuffer')], { type: mimeOf(entry.name) });
+    });
+  }
+
+  // ──── Сохранение колоды (с заменой старой версии, прогресс и картинки сохраняются) ────
   async function saveDeck({ deck, cards }) {
     const old = await DB.get('decks', deck.id);
     deck.createdAt = old ? old.createdAt : Date.now();
     if (old) {
       const oldCards = await DB.byIndex('cards', 'deckId', deck.id);
+      const oldMap = new Map(oldCards.map((c) => [c.key, c]));
       const keep = new Set(cards.map((c) => c.key));
       for (const oc of oldCards) if (!keep.has(oc.key)) await DB.del('cards', oc.key);
+      // в новой версии нет картинки, а в старой была — оставляем старую
+      cards.forEach((c) => {
+        const oc = oldMap.get(c.key);
+        if (!c.image && oc && oc.image) c.image = oc.image;
+        if (!c.prompt && oc && oc.prompt) c.prompt = oc.prompt;
+      });
+      const withImg = cards.find((c) => c.image);
+      if (withImg) deck.coverKey = withImg.key;
     }
     await DB.putMany('cards', cards);
     await DB.put('decks', deck);
     return !!old;
   }
 
-  // ──── Импорт колоды из zip-файла ────
+  // ──── Текст JSON: убираем ```-обёртку из чата ────
+  function parseJsonText(text) {
+    const t = String(text).trim().replace(/^```[a-z]*\s*/i, '').replace(/```\s*$/, '').trim();
+    try { return JSON.parse(t); } catch (e) { throw new Error('Текст не похож на колоду (ошибка JSON)'); }
+  }
+
+  async function confirmAndSave(parsed) {
+    const exists = await DB.get('decks', parsed.deck.id);
+    if (exists) {
+      const ok = await confirmSheet('Колода уже есть', `«${parsed.deck.title}» будет обновлена. Прогресс и картинки сохранятся.`, 'Обновить');
+      if (!ok) return null;
+    }
+    await saveDeck(parsed);
+    parsed.missing = parsed.cards.filter((c) => !c.image).map((c) => c.key.slice(parsed.deck.id.length + 1));
+    return parsed;
+  }
+
+  // ──── Импорт колоды из файла: zip с картинками или deck.json без них ────
   async function importDeckFile(file) {
+    const head = new Uint8Array(await file.slice(0, 2).arrayBuffer());
+    const isZip = head[0] === 0x50 && head[1] === 0x4b;   // сигнатура "PK"
+    if (!isZip) {
+      const meta = parseJsonText(await file.text());
+      return confirmAndSave(await readDeckMeta(meta, async () => null));
+    }
     const zip = await JSZip.loadAsync(file);
     const metaEntry = findEntry(zip, 'deck.json');
     if (!metaEntry) {
       if (findEntry(zip, 'backup.json')) throw new Error('Это резервная копия — восстановите её в разделе «Ещё»');
       throw new Error('В архиве нет deck.json');
     }
-    const parsed = await readDeck(zip, metaEntry);
-    const exists = await DB.get('decks', parsed.deck.id);
-    if (exists) {
-      const ok = await confirmSheet('Колода уже есть', `«${parsed.deck.title}» будет обновлена. Прогресс по карточкам сохранится.`, 'Обновить');
-      if (!ok) return null;
-    }
-    await saveDeck(parsed);
-    return parsed;
+    return confirmAndSave(await readDeck(zip, metaEntry));
+  }
+
+  function importedToast(res) {
+    const miss = res.missing.length ? ` · без картинки: ${res.missing.length}` : '';
+    toast(`Колода «${res.deck.title}»: ${cardsWord(res.cards.length)}${miss}`);
+    DB.persist();
+  }
+
+  // ──── Вставка колоды из буфера обмена ────
+  function pasteDeck() {
+    Sheet.open(`
+      <h3>Вставить колоду</h3>
+      <p class="subtitle">Скопируйте в чате текст колоды (начинается с «{») и вставьте сюда.</p>
+      <label class="field"><textarea id="pasteText" rows="8" placeholder='{"title": "...", "cards": [...]}'></textarea></label>
+      <div class="btn-row">
+        <button class="btn" id="btnClip">Из буфера</button>
+        <button class="btn primary" id="btnPasteOk">Создать колоду</button>
+      </div>`);
+    $('#btnClip').onclick = async () => {
+      try { $('#pasteText').value = await navigator.clipboard.readText(); } catch (e) { toast('Нет доступа к буферу — вставьте вручную долгим нажатием'); }
+    };
+    $('#btnPasteOk').onclick = async () => {
+      try {
+        const parsed = await readDeckMeta(parseJsonText($('#pasteText').value), async () => null);
+        Sheet.after = async () => {
+          const res = await confirmAndSave(parsed).catch((e) => { reportError('paste', e); return null; });
+          if (!res) { render(); return; }
+          importedToast(res);
+          navigate('deck', { deckId: res.deck.id });
+        };
+        Sheet.close();
+      } catch (err) { reportError('paste', err); }
+    };
   }
 
   // ──── Запуск импорта с выбором файла ────
@@ -100,9 +165,7 @@ const Importer = (() => {
     try {
       const res = await importDeckFile(file);
       if (!res) return null;
-      const miss = res.missing.length ? `. Без картинки: ${res.missing.join(', ')}` : '';
-      toast(`Колода «${res.deck.title}»: ${cardsWord(res.cards.length)}${miss}`);
-      DB.persist();
+      importedToast(res);
       return res.deck;
     } catch (err) { reportError('import', err); return null; }
   }
@@ -119,7 +182,7 @@ const Importer = (() => {
         image = `images/${cid}.${ext}`;
         folder.file(image, c.image);
       }
-      list.push({ id: cid, ru: c.ru, en: c.en, image });
+      list.push({ id: cid, ru: c.ru, en: c.en, prompt: c.prompt || '', image });
     }
     folder.file('deck.json', JSON.stringify({ format: DECK_FORMAT_VERSION, id: deck.id, title: deck.title, cards: list }, null, 2));
   }
@@ -171,5 +234,5 @@ const Importer = (() => {
     } catch (err) { reportError('restore', err); return false; }
   }
 
-  return { pickAndImport, importDeckFile, exportDeck, exportBackup, restoreBackup };
+  return { pickAndImport, importDeckFile, pasteDeck, exportDeck, exportBackup, restoreBackup };
 })();

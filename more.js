@@ -29,6 +29,12 @@ Object.assign(Screens, {
         ${Screens.toggleRow('autoSpeak', 'Автоозвучка', 'Произносить фразу при перевороте', p.autoSpeak)}
       </div>
 
+      <div class="section-title">Напоминания</div>
+      <div class="panel">
+        <button class="row" id="btnReminders"><span class="grow">🔔 Напоминания о занятиях
+          <div class="hint" id="remSummary">${esc(Reminders.summary())}</div></span>${CHEVRON}</button>
+      </div>
+
       <div class="section-title">Озвучка и вид</div>
       <div class="panel" style="padding:14px 16px">
         <label class="field"><span>Голос</span><select id="selVoice">${voices || '<option>Английские голоса не найдены</option>'}</select></label>
@@ -43,7 +49,8 @@ Object.assign(Screens, {
 
       <div class="section-title">Данные</div>
       <div class="panel">
-        <button class="row" id="btnImport"><span class="grow">Импортировать колоду (zip)</span>${CHEVRON}</button>
+        <button class="row" id="btnImport"><span class="grow">Импортировать колоду<div class="hint">zip с картинками или deck.json без картинок</div></span>${CHEVRON}</button>
+        <button class="row" id="btnPaste"><span class="grow">Вставить колоду из буфера<div class="hint">Текст deck.json, присланный в чате</div></span>${CHEVRON}</button>
         <button class="row" id="btnBackup"><span class="grow">Сохранить резервную копию<div class="hint">Колоды, профили и прогресс в один zip</div></span>${CHEVRON}</button>
         <button class="row" id="btnRestore"><span class="grow">Восстановить из копии</span>${CHEVRON}</button>
       </div>
@@ -82,6 +89,8 @@ Object.assign(Screens, {
     $('#btnTestVoice').onclick = () => Speech.say('Hello! Nice to meet you.');
     $('#selTheme').onchange = (e) => { lsSet(LS_THEME, e.target.value); applyTheme(); };
     $('#btnImport').onclick = async () => { const d = await Importer.pickAndImport(); if (d) navigate('deck', { deckId: d.id }); };
+    $('#btnReminders').onclick = () => navigate('reminders');
+    $('#btnPaste').onclick = () => Importer.pasteDeck();
     $('#btnBackup').onclick = () => Importer.exportBackup().catch((e) => reportError('backup', e));
     $('#btnRestore').onclick = async () => { if (await Importer.restoreBackup()) render(); };
   },

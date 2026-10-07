@@ -6,13 +6,20 @@
   --text: #2a2622;
   --text-2: #7a716a;
   --line: #e9dfd5;
-  --accent: #ef7a1d;
-  --accent-ink: #ffffff;
+  --accent: #b3ffff;        /* основной пастельный цвет */
+  --accent-ink: #13505a;    /* текст на основном цвете */
+  --accent-text: #2a8c99;   /* акцент для текста и значков на светлом фоне */
+  --accent-soft: #e3ffff;
+  --import: #99ffcc;      /* кнопки импорта колоды */
+  --import-ink: #12402b;
   --top: #1c2430;
   --top-ink: #ffffff;
-  --bad: #e5484d;
-  --hard: #f0a020;
-  --good: #2f9e5b;
+  --bad: #d9545a;
+  --hard: #c98a1a;
+  --good: #3a9a63;
+  --bad-bg: #ffd6d6;  --bad-ink: #8a2a2e;
+  --hard-bg: #ffecc2; --hard-ink: #7a5410;
+  --good-bg: #c9f2d6; --good-ink: #1f6b3d;
   --shadow: 0 6px 20px rgba(60, 40, 20, .08);
   --radius: 22px;
   --fs: 16px;
@@ -24,13 +31,13 @@
   :root:not([data-theme="light"]) {
     --bg: #12161c; --surface: #1d232c; --surface-2: #262d38; --text: #ece7e2;
     --text-2: #9aa3ad; --line: #2e3642; --top: #0c1015;
-    --shadow: 0 6px 20px rgba(0, 0, 0, .35); color-scheme: dark;
+    --shadow: 0 6px 20px rgba(0, 0, 0, .35); --accent-text: #8fe6ee; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #12161c; --surface: #1d232c; --surface-2: #262d38; --text: #ece7e2;
   --text-2: #9aa3ad; --line: #2e3642; --top: #0c1015;
-  --shadow: 0 6px 20px rgba(0, 0, 0, .35); color-scheme: dark;
+  --shadow: 0 6px 20px rgba(0, 0, 0, .35); --accent-text: #8fe6ee; color-scheme: dark;
 }
 body.kid { --fs: 19px; }
 
@@ -84,7 +91,7 @@ h2 { font-size: 1.8em; margin: 4px 0 2px; }
 }
 body.studying .tabbar { display: none; }
 .tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: var(--text-2); font-size: .8em; }
-.tab.active { color: var(--accent); }
+.tab.active { color: var(--accent-text); }
 
 /* ──── Сетка колод ──── */
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
@@ -166,7 +173,7 @@ body.studying .tabbar { display: none; }
 .back .ru { font-size: 1.15em; color: #6d655e; }
 .back .speak {
   margin-top: auto; width: 60px; height: 60px; border-radius: 50%;
-  background: #fdeedd; color: #ef7a1d; display: grid; place-items: center; flex: none;
+  background: #e3ffff; color: #2a8c99; display: grid; place-items: center; flex: none;
 }
 .back .speak svg { width: 28px; height: 28px; }
 .swipe-tag {
@@ -177,11 +184,11 @@ body.studying .tabbar { display: none; }
 .swipe-tag.right { right: 18px; color: var(--good); transform: rotate(12deg); }
 
 .grade { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 16px; }
-.grade .btn { flex-direction: column; gap: 0; min-height: 60px; color: #fff; }
+.grade .btn { flex-direction: column; gap: 0; min-height: 60px; }
 .grade .btn small { font-weight: 400; opacity: .85; font-size: .75em; }
-.grade .bad { background: var(--bad); }
-.grade .hard { background: var(--hard); }
-.grade .good { background: var(--good); }
+.grade .bad { background: var(--bad-bg); color: var(--bad-ink); }
+.grade .hard { background: var(--hard-bg); color: var(--hard-ink); }
+.grade .good { background: var(--good-bg); color: var(--good-ink); }
 .grade.two { grid-template-columns: 1fr 1fr; }
 .study-nav { display: flex; gap: 10px; margin-top: 16px; }
 .study-nav .btn { flex: 1; }
@@ -205,7 +212,7 @@ body.studying .tabbar { display: none; }
 }
 .emoji-pick { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
 .emoji-pick button { width: 46px; height: 46px; border-radius: 12px; font-size: 1.5em; background: var(--surface); }
-.emoji-pick button.sel { outline: 3px solid var(--accent); }
+.emoji-pick button.sel { outline: 3px solid var(--accent-text); }
 .edit-img { width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: 16px; background: var(--surface-2); margin-bottom: 8px; }
 
 /* ──── Всплывающее сообщение ──── */
@@ -214,3 +221,34 @@ body.studying .tabbar { display: none; }
   transform: translateX(-50%); max-width: calc(100% - 32px);
   background: var(--top); color: #fff; padding: 12px 18px; border-radius: 14px; box-shadow: var(--shadow);
 }
+
+/* ──── Кнопки импорта колоды (мятный цвет) ──── */
+.btn.import { background: var(--import); color: var(--import-ink); }
+.add-tile.import { background: var(--import); color: var(--import-ink); border-color: transparent; }
+
+/* ──── Напоминания ──── */
+.rem { padding: 14px 16px; margin-bottom: 12px; }
+.rem-top { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.rem-time { flex: 1; font-size: 1.9em; font-weight: 700; border: 0; background: none; padding: 0; min-width: 0; }
+.day-chips { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.chip { height: 40px; border-radius: 12px; background: var(--surface-2); font-weight: 600; font-size: .9em; }
+.chip.on { background: var(--accent); color: var(--accent-ink); }
+.day-quick { display: flex; gap: 14px; margin-top: 10px; }
+.day-quick button { color: var(--accent-text); font-size: .85em; font-weight: 600; }
+
+/* ──── Картинки: мастер и заглушки ──── */
+.img-banner { display: flex; align-items: center; gap: 12px; padding: 14px 16px; margin-bottom: 14px; }
+.img-banner .grow { flex: 1; min-width: 0; }
+.img-banner .hint { color: var(--text-2); font-size: .85em; }
+.img-banner .btn { min-height: 42px; padding: 0 16px; }
+.thumb-empty { display: grid; place-items: center; font-size: 1.4em; }
+.noimg { display: grid; place-items: center; background: #ece6df !important; }
+.noimg::after { content: "🖼"; font-size: 3em; opacity: .5; }
+.wiz { padding: 16px; }
+.wiz-ru { font-size: 1.3em; font-weight: 700; }
+.wiz-en { color: var(--text-2); margin-top: 2px; }
+.prompt-box {
+  background: var(--surface-2); border-radius: 14px; padding: 12px 14px; font-size: .95em;
+  user-select: text; -webkit-user-select: text; white-space: pre-wrap;
+}
+a.btn { text-decoration: none; color: inherit; }
