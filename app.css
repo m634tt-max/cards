@@ -153,7 +153,7 @@ body.studying .tabbar { display: none; }
 
 .stage { position: relative; perspective: 1400px; touch-action: pan-y; user-select: none; }
 .card3d {
-  position: relative; width: 100%; aspect-ratio: 3 / 4; max-height: calc(100dvh - 260px);
+  position: relative; width: 100%; aspect-ratio: 3 / 4; max-height: calc(100dvh - 200px);
   margin: 0 auto; transform-style: preserve-3d; transition: transform .45s cubic-bezier(.3,.7,.3,1);
 }
 .card3d.flipped { transform: rotateY(180deg); }
@@ -333,3 +333,10 @@ mark.term { background: var(--accent-soft); color: #111; border-radius: 4px; pad
 /* ──── Схемы: показывать целиком ──── */
 .wiz .edit-img { object-fit: contain; background: #fff; }
 .topic-pic.drawn, .drawn.topic-pic { background-size: contain; background-color: #fff; cursor: zoom-in; }
+
+/* ──── Листание свайпами ──── */
+.back-actions { margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 14px; }
+.back .back-actions .speak { margin-top: 0; }
+.again-btn { padding: 10px 16px; border-radius: 999px; background: #f1ece6; color: #5a524b; font-weight: 700; font-size: .9em; }
+.again-btn.on { background: #ffd6d6; color: #8a2a2e; }
+.swipe-help { text-align: center; color: var(--text-2); font-size: .82em; margin: 14px 4px 0; }
