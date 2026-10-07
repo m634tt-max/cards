@@ -179,11 +179,16 @@ const ImageGen = {
 
   async generate(card) {
     const c = this.cfg();
-    const res = await fetch(`${c.url.replace(/\/+$/, '')}/image`, {
+    let res;
+    try {
+      res = await fetch(`${c.url.replace(/\/+$/, '')}/image`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Token': c.token },
       body: JSON.stringify({ prompt: this.promptFor(card) }),
-    });
+      });
+    } catch (err) {
+      throw new Error(`Нет связи с сервером (${err.message}). Проверьте интернет или адрес сервера.`);
+    }
     if (!res.ok) {
       let msg = `сервер ответил ${res.status}`;
       try { msg = (await res.json()).error || msg; } catch { /* не JSON */ }
@@ -203,6 +208,7 @@ const ImageGen = {
     this.cancelled = false;
     let ok = 0;
     const failed = [];
+    let firstError = '';
     Sheet.open(`<h3>✨ Генерация картинок</h3>
       <p class="subtitle" id="genStatus">Подготовка…</p>
       <div class="bar" style="height:10px"><i id="genBar" style="width:0%;background:var(--accent)"></i></div>
@@ -216,14 +222,25 @@ const ImageGen = {
       catch (err) {
         failed.push(i + 1);
         console.warn(err);
+        if (!firstError) firstError = err.message || String(err);
+        // одна и та же ошибка три раза подряд — дальше смысла нет
+        if (failed.length >= 3 && ok === 0) { this.cancelled = true; }
         if (/токен|token|подключена|501|403/i.test(err.message)) { toast(`Ошибка: ${err.message}`); break; }
       }
       const bar = $('#genBar');
       if (bar) bar.style.width = `${Math.round(((i + 1) / cards.length) * 100)}%`;
     }
     this.busy = false;
-    if (Sheet.isOpen()) { Sheet.after = () => {}; Sheet.close(); }
-    toast(`Готово: ${ok}${failed.length ? ` · ошибки: ${failed.length}` : ''}`);
+    // при ошибках окно не закрываем, а заменяем его содержимое (иначе закрытие и открытие гоняются в истории)
+    if (!failed.length && Sheet.isOpen()) { Sheet.after = () => {}; Sheet.close(); }
+    if (failed.length) {
+      Sheet.open(`<h3>Генерация: ${ok} готово, ошибок ${failed.length}</h3>
+        <p class="subtitle">Текст ошибки (пришлите его в чат):</p>
+        <div class="prompt-box">${esc(firstError)}</div>
+        <div class="btn-row"><button class="btn" id="genErrCopy">📋 Копировать</button><button class="btn primary" id="genErrOk">Понятно</button></div>`);
+      $('#genErrCopy').onclick = () => ImageWizard.copy(firstError);
+      $('#genErrOk').onclick = () => Sheet.close();
+    } else toast(`Готово: ${ok}`);
     if (onDone) onDone();
   },
 
