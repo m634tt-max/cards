@@ -1,6 +1,6 @@
 'use strict';
 // ──── Константы ────
-const APP_VERSION = '1.1.2';
+const APP_VERSION = '1.1.3';
 const DECK_FORMAT_VERSION = 1;
 const BACKUP_FORMAT_VERSION = 1;
 const TOAST_MS = 2600;

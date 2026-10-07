@@ -99,7 +99,7 @@ const Reminders = {
     const items = cfg.reminders.map((r, i) => `
       <div class="panel rem" data-i="${i}">
         <div class="rem-top">
-          <input type="time" class="rem-time" value="${esc(r.time)}" data-f="time">
+          <button class="rem-time" data-f="time" aria-label="Изменить время">${esc(r.time)}</button>
           <label class="switch"><input type="checkbox" data-f="on" ${r.on !== false ? 'checked' : ''}><span></span></label>
           <button class="icon-btn" data-del aria-label="Удалить"><svg viewBox="0 0 24 24"><path d="M5 7h14M10 7V5h4v2M7 7l1 13h8l1-13"/></svg></button>
         </div>
@@ -130,7 +130,8 @@ const Reminders = {
     const setStatus = (t) => { $('#remStatus').textContent = t; };
     view.querySelectorAll('.rem').forEach((box) => {
       const r = cfg.reminders[Number(box.dataset.i)];
-      box.querySelector('[data-f="time"]').onchange = (e) => { r.time = e.target.value || DEFAULT_TIME; };
+      const timeBtn = box.querySelector('[data-f="time"]');
+      timeBtn.onclick = () => TimePicker.open(r.time, (t) => { r.time = t; timeBtn.textContent = t; });
       box.querySelector('[data-f="on"]').onchange = (e) => { r.on = e.target.checked; };
       box.querySelector('[data-del]').onclick = () => { cfg.reminders.splice(Number(box.dataset.i), 1); this.draw(cfg); };
       box.querySelectorAll('[data-day]').forEach((c) => {
@@ -183,3 +184,49 @@ function b64uToBytes(s) {
   const bin = atob((s + pad).replace(/-/g, '+').replace(/_/g, '/'));
   return Uint8Array.from(bin, (c) => c.charCodeAt(0));
 }
+
+// ──── Свой выбор времени: крупные кнопки, всегда помещается в экран ────
+// (системное окно Chrome на некоторых телефонах не влезает по ширине)
+const MINUTE_STEP = 5;
+const HOURS_PER_DAY = 24;
+const MINUTES_PER_HOUR = 60;
+
+const TimePicker = {
+  open(value, onDone) {
+    let [h, m] = String(value || DEFAULT_TIME).split(':').map(Number);
+    const pad = (n) => String(n).padStart(2, '0');
+    const hours = Array.from({ length: HOURS_PER_DAY }, (_, i) => i);
+    const mins = Array.from({ length: MINUTES_PER_HOUR / MINUTE_STEP }, (_, i) => i * MINUTE_STEP);
+    Sheet.open(`
+      <h3>Время напоминания</h3>
+      <div class="tp-show"><span id="tpH">${pad(h)}</span>:<span id="tpM">${pad(m)}</span></div>
+      <div class="section-title" style="margin:10px 2px 6px">Часы</div>
+      <div class="tp-grid tp-hours">${hours.map((x) => `<button data-h="${x}">${pad(x)}</button>`).join('')}</div>
+      <div class="section-title" style="margin:12px 2px 6px">Минуты</div>
+      <div class="tp-grid tp-mins">${mins.map((x) => `<button data-m="${x}">${pad(x)}</button>`).join('')}</div>
+      <div class="tp-fine"><button data-d="-1">− 1 мин</button><button data-d="1">+ 1 мин</button></div>
+      <div class="btn-row">
+        <button class="btn" id="tpCancel">Отмена</button>
+        <button class="btn primary" id="tpOk">Готово</button>
+      </div>`);
+    const sheet = $('#sheet');
+    const paint = () => {
+      $('#tpH').textContent = pad(h);
+      $('#tpM').textContent = pad(m);
+      sheet.querySelectorAll('[data-h]').forEach((b) => b.classList.toggle('on', Number(b.dataset.h) === h));
+      sheet.querySelectorAll('[data-m]').forEach((b) => b.classList.toggle('on', Number(b.dataset.m) === m));
+    };
+    sheet.onclick = (e) => {
+      const t = e.target.closest('button');
+      if (!t) return;
+      if (t.dataset.h) h = Number(t.dataset.h);
+      else if (t.dataset.m) m = Number(t.dataset.m);
+      else if (t.dataset.d) m = (m + Number(t.dataset.d) + MINUTES_PER_HOUR) % MINUTES_PER_HOUR;
+      // Sheet.after без действия: не перерисовывать экран, чтобы не потерять несохранённые правки
+      else if (t.id === 'tpCancel') { Sheet.after = () => {}; Sheet.close(); return; }
+      else if (t.id === 'tpOk') { onDone(`${pad(h)}:${pad(m)}`); Sheet.after = () => {}; Sheet.close(); return; }
+      paint();
+    };
+    paint();
+  },
+};
