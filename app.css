@@ -279,7 +279,7 @@ a.btn { text-decoration: none; color: inherit; }
 .face.back .poem-lines { margin-top: 18px; text-align: center; color: #2a2622; }
 .poem-lines.small { font-size: .82em; line-height: 1.35; font-weight: 500; margin-top: 6px; }
 .poem-lines.letters { letter-spacing: .25em; color: var(--accent-text); }
-mark.rhyme { background: #fff3b0; color: inherit; border-radius: 4px; padding: 0 2px; }
+mark.rhyme { background: #fff3b0; color: #111; border-radius: 4px; padding: 0 2px; }
 .poem-task { font-size: 1.1em; margin: 4px 0 14px; }
 .poem-strip, .poem-table { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .poem-cell { position: relative; display: flex; flex-direction: column; justify-content: flex-start; align-self: start; text-align: left; }
@@ -289,7 +289,7 @@ mark.rhyme { background: #fff3b0; color: inherit; border-radius: 4px; padding: 0
 .poem-row { display: flex; gap: 12px; align-items: center; padding: 10px; margin-bottom: 10px; width: 100%; text-align: left; }
 .poem-thumb { width: 64px; height: 64px; flex: none; border-radius: 12px; background: #ddd center/cover no-repeat; }
 .poem-row .poem-lines { font-size: 1.05em; }
-.blank { display: inline-block; min-width: 1.5em; border-bottom: 2px solid var(--accent-text); background: var(--accent-soft); border-radius: 4px; cursor: pointer; }
+.blank { display: inline-block; min-width: 1.5em; border-bottom: 2px solid var(--accent-text); background: var(--accent-soft); color: #111; border-radius: 4px; cursor: pointer; }
 .blank.peek { border-bottom-style: dashed; background: #fff3b0; color: #2a2622; }
 
 /* ──── Лента миниатюр в мастере картинок ──── */
@@ -317,7 +317,7 @@ mark.rhyme { background: #fff3b0; color: inherit; border-radius: 4px; padding: 0
 .topic-points li { margin-bottom: 4px; }
 .topic-orig summary { cursor: pointer; color: var(--accent-text); font-weight: 600; padding: 6px 0; }
 .topic-text { line-height: 1.55; font-size: .95em; }
-mark.term { background: var(--accent-soft); color: inherit; border-radius: 4px; padding: 0 2px; font-weight: 600; }
+mark.term { background: var(--accent-soft); color: #111; border-radius: 4px; padding: 0 2px; font-weight: 600; }
 .quiz-opts { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
 .quiz-opt { text-align: left; padding: 12px 14px; border-radius: 14px; background: var(--surface-2); font-weight: 600; }
 .quiz-opt.right { background: var(--good-bg); color: var(--good-ink); }
@@ -326,3 +326,10 @@ mark.term { background: var(--accent-soft); color: inherit; border-radius: 4px; 
 .f-text { width: 100%; margin-top: 8px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); }
 .f-pt { display: flex; gap: 8px; align-items: flex-start; padding: 6px 0; line-height: 1.4; }
 .f-pt input { width: 20px; height: 20px; flex: none; margin-top: 1px; }
+
+/* ──── Пометка точной схемы ──── */
+.drawn-badge { background: var(--accent-soft); color: var(--accent-ink); border-radius: 12px; padding: 8px 12px; font-size: .85em; font-weight: 600; margin: 4px 0 10px; }
+
+/* ──── Схемы: показывать целиком ──── */
+.wiz .edit-img { object-fit: contain; background: #fff; }
+.topic-pic.drawn, .drawn.topic-pic { background-size: contain; background-color: #fff; cursor: zoom-in; }

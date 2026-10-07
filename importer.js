@@ -37,7 +37,7 @@ const Importer = (() => {
   }
 
   // ──── Дополнительные поля карточек тем (заголовок, вопрос, тезисы, термины, тест) ────
-  const EXTRA_KEYS = ['title', 'question', 'points', 'terms', 'quiz', 'visual'];
+  const EXTRA_KEYS = ['title', 'question', 'points', 'terms', 'quiz', 'visual', 'drawn'];
   function extraOf(c) {
     const e = {};
     EXTRA_KEYS.forEach((k) => { if (c[k] !== undefined && c[k] !== null) e[k] = c[k]; });

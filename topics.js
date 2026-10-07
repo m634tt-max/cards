@@ -109,13 +109,30 @@ const Topics = {
   draw() {
     ({ map: this.drawMap, learn: this.drawLearn, recall: this.drawRecall, cloze: this.drawCloze,
       quiz: this.drawQuiz, feynman: this.drawFeynman })[this.st.mode].call(this);
+    this.bindZoom();
     window.scrollTo(0, 0);
   },
 
   // ──── Общие куски разметки ────
   pic(card, cls) {
     const url = imgUrl(card);
-    return `<div class="${cls} ${url ? '' : 'noimg'}" style="background-image:url('${url}')"></div>`;
+    if (cls === 'topic-mini' && this.ex(card).drawn && url) cls = 'topic-pic drawn';
+    return `<div class="${cls} ${url ? '' : 'noimg'}" data-zoom="${url ? card.key : ''}" style="background-image:url('${url}')"></div>`;
+  },
+
+  // увеличенный просмотр картинки (для схем с подписями)
+  bindZoom() {
+    $('#view').querySelectorAll('[data-zoom]').forEach((el) => {
+      if (!el.dataset.zoom) return;
+      el.addEventListener('click', (e) => {
+        const card = this.cards.find((c) => c.key === el.dataset.zoom);
+        const opened = el.classList.contains('drawn') || el.classList.contains('topic-mini');
+        if (!card || !opened) return;           // на лицевой стороне нажатие переворачивает карточку
+        e.stopPropagation();
+        Sheet.open(`<img src="${imgUrl(card)}" alt="" style="width:100%;border-radius:12px;background:#fff">
+          <p class="subtitle" style="text-align:center;margin-top:8px">${esc(this.ex(card).title || '')}</p>`);
+      });
+    });
   },
 
   // ключевые термины подсвечиваются в тексте

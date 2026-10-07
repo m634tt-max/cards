@@ -86,6 +86,7 @@ const ImageWizard = {
       <p class="subtitle" style="margin:6px 2px 10px">Карточка ${this.pos + 1} из ${this.queue.length} · без картинки: ${left}</p>
       <div class="panel wiz">
         ${c.image ? `<img class="edit-img" src="${imgUrl(c)}" alt="">` : ''}
+        ${c.extra && c.extra.drawn && c.image ? '<div class="drawn-badge">📐 Точная схема, нарисованная вручную — нейросеть её не улучшит</div>' : ''}
         <div class="wiz-ru">${c.extra && c.extra.title ? esc(c.extra.title) : esc(c.ru).replace(/\n/g, '<br>')}</div>
         <div class="wiz-en">${esc(c.en)}</div>
         <div class="section-title" style="margin:16px 0 6px">Промпт</div>
@@ -124,6 +125,8 @@ const ImageWizard = {
     on('#btnNext', () => this.go(this.pos + 1));
     $('#wizStrip').querySelectorAll('[data-go]').forEach((b) => { b.onclick = () => this.go(Number(b.dataset.go)); });
     on('#btnGenOne', async () => {
+      if (card.extra && card.extra.drawn && card.image
+        && !(await confirmSheet('Заменить точную схему?', 'Нейросеть нарисует картинку «по мотивам»: подписи и детали могут быть неверными.', 'Всё равно перерисовать', true))) return;
       const btn = $('#btnGenOne');
       btn.disabled = true; btn.textContent = '✨ Рисую…';
       try { if (!card.image) this.done += 1; await ImageGen.generate(card); this.show(); toast('Картинка готова'); }
