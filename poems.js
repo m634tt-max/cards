@@ -224,6 +224,7 @@ Object.assign(Poems, {
     $('#btnSpeak').onclick = (e) => { e.stopPropagation(); Speech.sayRu(c.ru); };
     $('#btnPrev').onclick = () => { st.i -= 1; this.draw(); };
     $('#btnNext').onclick = () => { st.i += 1; this.draw(); };
+    attachSwipe($('#card'), () => $('#btnNext').click(), () => { if (st.i > 0) $('#btnPrev').click(); });
   },
 
   // 2. Снежный ком: картинки 1..k, рассказать с начала
