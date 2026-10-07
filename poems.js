@@ -96,6 +96,7 @@ const Poems = {
       <div class="panel">${rows}</div>
       <div class="deck-actions" style="margin-top:14px">
         <button id="btnPoemText">📜 Весь текст</button>
+        <button id="btnPoemImages">🖼 Картинки</button>
         <button id="btnPoemEdit">✏️ Кусочки</button>
         <button id="btnPoemDel" class="del">🗑 Удалить стих</button>
       </div>`;
@@ -103,6 +104,7 @@ const Poems = {
     $('#view').querySelectorAll('[data-mode]').forEach((b) => { b.onclick = () => navigate('poemMode', { deckId, mode: b.dataset.mode }); });
     $('#btnPoemText').onclick = () => this.showText(deck, cards);
     $('#btnPoemEdit').onclick = () => this.editList(cards);
+    $('#btnPoemImages').onclick = () => navigate('images', { deckId });
     $('#btnPoemDel').onclick = () => Screens.deleteDeck(deck);
   },
 

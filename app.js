@@ -1,6 +1,6 @@
 'use strict';
 // ──── Константы ────
-const APP_VERSION = '1.3.0';
+const APP_VERSION = '1.4.0';
 const DECK_FORMAT_VERSION = 1;
 const BACKUP_FORMAT_VERSION = 1;
 const TOAST_MS = 2600;
@@ -240,7 +240,7 @@ async function deckSummary(deck) {
 
 // Колоды слов (стихи хранятся там же, но показываются в своём разделе)
 async function loadDecks() {
-  return (await DB.all('decks')).filter((d) => d.type !== 'poem').sort((a, b) => b.createdAt - a.createdAt);
+  return (await DB.all('decks')).filter((d) => !['poem', 'topic'].includes(d.type)).sort((a, b) => b.createdAt - a.createdAt);
 }
 
 async function loadPoems() {
@@ -253,7 +253,7 @@ async function deckCover(deck) {
 }
 
 // ──── Навигация ────
-const TAB_TITLES = { today: 'Учить', library: 'Колоды', poems: 'Стихи', more: 'Ещё' };
+const TAB_TITLES = { today: 'Учить', library: 'Колоды', topics: 'Темы', poems: 'Стихи', more: 'Ещё' };
 
 function navigate(screen, params = {}, push = true) {
   App.route = { screen, params };
@@ -280,7 +280,7 @@ window.addEventListener('popstate', (e) => {
 async function render() {
   const { screen, params } = App.route;
   const isTab = screen in TAB_TITLES;
-  document.body.classList.toggle('studying', screen === 'study' || screen === 'poemMode');
+  document.body.classList.toggle('studying', ['study', 'poemMode', 'topicMode'].includes(screen));
   $('#btnBack').hidden = isTab;
   $('#btnProfile').hidden = screen === 'study';
   document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === screen));
@@ -297,5 +297,8 @@ async function render() {
     else if (screen === 'poems') await Poems.list();
     else if (screen === 'poem') await Poems.screen(params.deckId);
     else if (screen === 'poemMode') await Poems.mode(params);
+    else if (screen === 'topics') await Topics.list();
+    else if (screen === 'topic') await Topics.screen(params.deckId);
+    else if (screen === 'topicMode') await Topics.mode(params);
   } catch (err) { reportError('render', err); }
 }

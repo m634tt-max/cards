@@ -29,10 +29,12 @@ Object.assign(Screens, {
         ${Screens.toggleRow('autoSpeak', 'Автоозвучка', 'Произносить фразу при перевороте', p.autoSpeak)}
       </div>
 
-      <div class="section-title">Напоминания</div>
+      <div class="section-title">Напоминания и сервер</div>
       <div class="panel">
         <button class="row" id="btnReminders"><span class="grow">🔔 Напоминания о занятиях
           <div class="hint" id="remSummary">${esc(Reminders.summary())}</div></span>${CHEVRON}</button>
+        <button class="row" id="btnGenSettings"><span class="grow">✨ Генерация картинок
+          <div class="hint">Сервер Cloudflare, токен, проверка</div></span>${CHEVRON}</button>
       </div>
 
       <div class="section-title">Озвучка и вид</div>
@@ -90,6 +92,7 @@ Object.assign(Screens, {
     $('#selTheme').onchange = (e) => { lsSet(LS_THEME, e.target.value); applyTheme(); };
     $('#btnImport').onclick = async () => { const d = await Importer.pickAndImport(); if (d) navigate('deck', { deckId: d.id }); };
     $('#btnReminders').onclick = () => navigate('reminders');
+    $('#btnGenSettings').onclick = () => ImageGen.settings();
     $('#btnPaste').onclick = () => Importer.pasteDeck();
     $('#btnBackup').onclick = () => Importer.exportBackup().catch((e) => reportError('backup', e));
     $('#btnRestore').onclick = async () => { if (await Importer.restoreBackup()) render(); };

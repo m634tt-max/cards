@@ -36,6 +36,14 @@ const Importer = (() => {
     });
   }
 
+  // ──── Дополнительные поля карточек тем (заголовок, вопрос, тезисы, термины, тест) ────
+  const EXTRA_KEYS = ['title', 'question', 'points', 'terms', 'quiz', 'visual'];
+  function extraOf(c) {
+    const e = {};
+    EXTRA_KEYS.forEach((k) => { if (c[k] !== undefined && c[k] !== null) e[k] = c[k]; });
+    return Object.keys(e).length ? e : null;
+  }
+
   // ──── Разбор описания колоды; getImage(path) возвращает Blob или null ────
   async function readDeckMeta(meta, getImage) {
     validateDeck(meta);
@@ -51,9 +59,10 @@ const Importer = (() => {
       cards.push({
         key: `${deckId}/${cardId}`, deckId, idx: i, image,
         ru: String(c.ru || c.text || '').trim(), en: String(c.en || '').trim(), prompt: String(c.prompt || '').trim(),
+        promptEn: String(c.prompt_en || '').trim(), extra: extraOf(c),
       });
     }
-    const type = meta.type === 'poem' ? 'poem' : 'words';
+    const type = ['poem', 'topic'].includes(meta.type) ? meta.type : 'words';
     const deck = { id: deckId, title, type, author: String(meta.author || '').trim(), cardCount: cards.length,
       coverKey: (cards.find((c) => c.image) || cards[0]).key };
     return { deck, cards, missing };
@@ -83,6 +92,7 @@ const Importer = (() => {
         const oc = oldMap.get(c.key);
         if (!c.image && oc && oc.image) c.image = oc.image;
         if (!c.prompt && oc && oc.prompt) c.prompt = oc.prompt;
+        if (!c.promptEn && oc && oc.promptEn) c.promptEn = oc.promptEn;
       });
       const withImg = cards.find((c) => c.image);
       if (withImg) deck.coverKey = withImg.key;
@@ -185,10 +195,10 @@ const Importer = (() => {
         image = `images/${cid}.${ext}`;
         folder.file(image, c.image);
       }
-      list.push({ id: cid, ru: c.ru, en: c.en, prompt: c.prompt || '', image });
+      list.push({ id: cid, ru: c.ru, en: c.en, prompt: c.prompt || '', prompt_en: c.promptEn || '', ...(c.extra || {}), image });
     }
     const meta = { format: DECK_FORMAT_VERSION, id: deck.id, title: deck.title, cards: list };
-    if (deck.type === 'poem') { meta.type = 'poem'; meta.author = deck.author || ''; }
+    if (deck.type === 'poem' || deck.type === 'topic') { meta.type = deck.type; meta.author = deck.author || ''; }
     folder.file('deck.json', JSON.stringify(meta, null, 2));
   }
 

@@ -78,10 +78,10 @@ const Screens = {
     const view = $('#view');
     const deck = await DB.get('decks', deckId);
     if (!deck) { switchTab('library'); return; }
-    if (deck.type === 'poem') {
-      App.route = { screen: 'poem', params: { deckId } };
+    if (deck.type === 'poem' || deck.type === 'topic') {
+      App.route = { screen: deck.type, params: { deckId } };
       history.replaceState({ route: App.route }, '');
-      await Poems.screen(deckId);
+      await (deck.type === 'poem' ? Poems.screen(deckId) : Topics.screen(deckId));
       return;
     }
     $('#topTitle').textContent = deck.title;
@@ -115,6 +115,7 @@ const Screens = {
         <button class="btn" id="btnBrowse">Просмотр всех</button>
       </div>
       <div class="deck-actions">
+        <button id="btnDeckImages">🖼 Картинки</button>
         <button id="btnDeckMenu">✏️ Изменить</button>
         <button id="btnDeckExport">📤 Выгрузить</button>
         <button id="btnDeckDelete" class="del">🗑 Удалить колоду</button>
@@ -124,6 +125,7 @@ const Screens = {
     $('#btnStudy').onclick = () => navigate('study', { deckIds: [deckId], mode: 'srs' });
     $('#btnBrowse').onclick = () => navigate('study', { deckIds: [deckId], mode: 'browse' });
     $('#btnDeckMenu').onclick = () => Screens.deckMenu(deck);
+    $('#btnDeckImages').onclick = () => navigate('images', { deckId });
     $('#btnDeckExport').onclick = () => Importer.exportDeck(deck.id).catch((e) => reportError('export', e));
     $('#btnDeckDelete').onclick = () => Screens.deleteDeck(deck);
     if (noImg) $('#btnAddImages').onclick = () => navigate('images', { deckId });
@@ -167,8 +169,8 @@ const Screens = {
       `${cardsWord(deck.cardCount)}, картинки и прогресс всех профилей будут удалены. Отменить нельзя.`, 'Удалить', true);
     if (!ok) return;
     await DB.deleteDeck(deck.id);
-    toast(deck.type === 'poem' ? 'Стих удалён' : 'Колода удалена');
-    switchTab(deck.type === 'poem' ? 'poems' : 'library');
+    toast({ poem: 'Стих удалён', topic: 'Тема удалена' }[deck.type] || 'Колода удалена');
+    switchTab({ poem: 'poems', topic: 'topics' }[deck.type] || 'library');
   },
 
   // ──── Редактирование карточки ────

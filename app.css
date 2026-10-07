@@ -291,3 +291,38 @@ mark.rhyme { background: #fff3b0; color: inherit; border-radius: 4px; padding: 0
 .poem-row .poem-lines { font-size: 1.05em; }
 .blank { display: inline-block; min-width: 1.5em; border-bottom: 2px solid var(--accent-text); background: var(--accent-soft); border-radius: 4px; cursor: pointer; }
 .blank.peek { border-bottom-style: dashed; background: #fff3b0; color: #2a2622; }
+
+/* ──── Лента миниатюр в мастере картинок ──── */
+.wiz-strip { display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 8px; scrollbar-width: none; }
+.wiz-strip::-webkit-scrollbar { display: none; }
+.wiz-dot { flex: none; width: 52px; height: 52px; border-radius: 12px; background: var(--surface) center/cover no-repeat;
+  box-shadow: var(--shadow); font-weight: 700; color: var(--text-2); border: 3px solid transparent; }
+.wiz-dot.empty { background: var(--surface-2); border: 2px dashed var(--line); }
+.wiz-dot.cur { border: 3px solid var(--accent-text); }
+
+/* ──── Темы ──── */
+.pill { display: inline-block; background: var(--accent); color: var(--accent-ink); border-radius: 999px; padding: 0 8px; font-size: .8em; margin-left: 4px; }
+.topic-map { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.topic-tile { position: relative; text-align: left; display: flex; flex-direction: column; gap: 6px; }
+.topic-tile .num { position: absolute; top: 6px; left: 6px; background: rgba(255,255,255,.92); color: #2a2622; border-radius: 50%;
+  width: 26px; height: 26px; display: grid; place-items: center; font-weight: 800; font-size: .85em; }
+.topic-tile b { font-size: .92em; line-height: 1.25; }
+.topic-card { padding: 14px; cursor: pointer; }
+.topic-pic { width: 100%; aspect-ratio: 1; border-radius: 16px; background: #ddd center/cover no-repeat; }
+.topic-mini { width: 38%; aspect-ratio: 1; border-radius: 14px; background: #ddd center/cover no-repeat; margin: 0 auto 6px; }
+.topic-title { font-size: 1.3em; font-weight: 800; margin-top: 10px; text-align: center; }
+.topic-q { font-size: 1.2em; font-weight: 700; margin-top: 10px; text-align: center; }
+.tap-note { text-align: center; color: var(--text-2); font-size: .9em; margin-top: 8px; }
+.topic-points { margin: 0 0 8px; padding-left: 20px; line-height: 1.5; }
+.topic-points li { margin-bottom: 4px; }
+.topic-orig summary { cursor: pointer; color: var(--accent-text); font-weight: 600; padding: 6px 0; }
+.topic-text { line-height: 1.55; font-size: .95em; }
+mark.term { background: var(--accent-soft); color: inherit; border-radius: 4px; padding: 0 2px; font-weight: 600; }
+.quiz-opts { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.quiz-opt { text-align: left; padding: 12px 14px; border-radius: 14px; background: var(--surface-2); font-weight: 600; }
+.quiz-opt.right { background: var(--good-bg); color: var(--good-ink); }
+.quiz-opt.wrong { background: var(--bad-bg); color: var(--bad-ink); }
+.quiz-opt.dim { opacity: .55; }
+.f-text { width: 100%; margin-top: 8px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); }
+.f-pt { display: flex; gap: 8px; align-items: flex-start; padding: 6px 0; line-height: 1.4; }
+.f-pt input { width: 20px; height: 20px; flex: none; margin-top: 1px; }

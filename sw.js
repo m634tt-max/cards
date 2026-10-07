@@ -1,10 +1,10 @@
 'use strict';
 // ──── Service worker: офлайн-кеш и push-напоминания ────
 // При изменении файлов приложения увеличьте номер версии — телефон скачает обновление.
-const CACHE = 'cards-v1.3.0';
+const CACHE = 'cards-v1.4.0';
 const SHELL = [
   './', 'index.html', 'app.css', 'db.js', 'srs.js', 'app.js', 'importer.js', 'screens.js',
-  'more.js', 'study.js', 'reminders.js', 'images.js', 'poems.js', 'main.js', 'vendor/jszip.min.js',
+  'more.js', 'study.js', 'reminders.js', 'images.js', 'poems.js', 'topics.js', 'main.js', 'vendor/jszip.min.js',
   'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png',
 ];
 const DB_NAME = 'flashcards';
@@ -53,7 +53,7 @@ async function buildBody() {
     const [profiles, progress, decks] = await Promise.all([readAll(db, 'profiles'), readAll(db, 'progress'), readAll(db, 'decks')]);
     db.close();
     const now = Date.now();
-    const totalCards = decks.filter((d) => d.type !== 'poem').reduce((a, d) => a + (d.cardCount || 0), 0);
+    const totalCards = decks.filter((d) => !['poem', 'topic'].includes(d.type)).reduce((a, d) => a + (d.cardCount || 0), 0);
     const parts = profiles.map((p) => {
       const mine = progress.filter((r) => r.profileId === p.id);
       const due = mine.filter((r) => r.last > 0 && r.due <= now).length;
