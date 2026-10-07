@@ -1,6 +1,6 @@
 'use strict';
 // ──── Константы ────
-const APP_VERSION = '1.4.3';
+const APP_VERSION = '1.5.0';
 const DECK_FORMAT_VERSION = 1;
 const BACKUP_FORMAT_VERSION = 1;
 const TOAST_MS = 2600;
@@ -301,4 +301,20 @@ async function render() {
     else if (screen === 'topic') await Topics.screen(params.deckId);
     else if (screen === 'topicMode') await Topics.mode(params);
   } catch (err) { reportError('render', err); }
+}
+
+// ──── Универсальный горизонтальный свайп (для стихов и тем) ────
+const SWIPE_MIN_PX = 70;
+const SWIPE_MAX_SLOPE = 0.6;   // свайп должен быть скорее горизонтальным
+function attachSwipe(el, onNext, onPrev) {
+  let x0 = 0, y0 = 0, active = false;
+  el.addEventListener('touchstart', (e) => { const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; active = true; }, { passive: true });
+  el.addEventListener('touchend', (e) => {
+    if (!active) return;
+    active = false;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - x0, dy = t.clientY - y0;
+    if (Math.abs(dx) < SWIPE_MIN_PX || Math.abs(dy) > Math.abs(dx) * SWIPE_MAX_SLOPE) return;
+    if (dx < 0) onNext(); else onPrev();
+  }, { passive: true });
 }
