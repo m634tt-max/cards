@@ -37,8 +37,11 @@ const DB = (() => {
           s.createIndex('deckId', 'deckId');
         }
       };
-      // другая вкладка или service worker держит старую версию базы — закрываемся и ждём
-      req.onblocked = () => console.warn('IndexedDB: обновление базы ждёт закрытия других вкладок');
+      // другая копия приложения держит старую версию базы — обновление ждёт её закрытия
+      req.onblocked = () => {
+        console.warn('IndexedDB: обновление базы ждёт закрытия других копий приложения');
+        if (typeof showDbBlocked === 'function') showDbBlocked();
+      };
       req.onsuccess = () => {
         const db = req.result;
         db.onversionchange = () => db.close();

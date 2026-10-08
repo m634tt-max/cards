@@ -1,6 +1,6 @@
 'use strict';
 // ──── Константы ────
-const APP_VERSION = '1.7.0';
+const APP_VERSION = '1.7.3';
 const DECK_FORMAT_VERSION = 1;
 const BACKUP_FORMAT_VERSION = 1;
 const TOAST_MS = 2600;
@@ -277,10 +277,27 @@ window.addEventListener('popstate', (e) => {
   render();
 });
 
+// ──── Хранилище занято старой копией приложения ────
+function showDbBlocked() {
+  App.dbBlocked = true;
+  $('#view').innerHTML = `<div class="empty"><div class="big">⏳</div>
+    <p><b>Обновляю хранилище до новой версии</b></p>
+    <p class="subtitle">Мешает другая открытая копия приложения. Закройте её:<br>
+      • смахните «Карточки» из списка недавних приложений;<br>
+      • закройте вкладки Chrome с адресом приложения.<br>
+      Затем откройте приложение снова. Колоды и прогресс не пострадают.</p></div>`;
+}
+
 async function render() {
   const { screen, params } = App.route;
+  // пока не загружен профиль (хранилище открывается или занято), экраны не рисуем
+  if (!App.profile) {
+    if (!App.dbBlocked) $('#view').innerHTML = '<div class="empty"><div class="big">⏳</div><p>Загрузка…</p></div>';
+    return;
+  }
   const isTab = screen in TAB_TITLES;
   if (typeof Listen !== 'undefined' && Listen.active && screen !== 'listen') Listen.stop();
+  if (typeof Reader !== 'undefined' && Reader.isOn()) Reader.stop();
   document.body.classList.toggle('studying', ['study', 'poemMode', 'topicMode', 'listen'].includes(screen));
   $('#btnBack').hidden = isTab;
   $('#btnProfile').hidden = screen === 'study';

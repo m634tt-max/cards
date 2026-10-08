@@ -38,6 +38,7 @@ async function boot() {
     Speech.init();
     bindChrome();
     await DB.open();
+    App.dbBlocked = false;   // старая копия закрылась — продолжаем запуск
     await loadProfiles();
     // после перезагрузки не возвращаемся в занятие и в модальные окна
     const st = history.state && history.state.route;

@@ -1,7 +1,7 @@
 'use strict';
 // ──── Service worker: офлайн-кеш и push-напоминания ────
 // При изменении файлов приложения увеличьте номер версии — телефон скачает обновление.
-const CACHE = 'cards-v1.7.0';
+const CACHE = 'cards-v1.7.3';
 const SHELL = [
   './', 'index.html', 'app.css', 'db.js', 'srs.js', 'app.js', 'importer.js', 'screens.js',
   'more.js', 'study.js', 'reminders.js', 'images.js', 'poems.js', 'topics.js', 'audio.js', 'listen.js', 'main.js', 'vendor/jszip.min.js',
@@ -12,7 +12,10 @@ const NOTIFY_TAG = 'cards-reminder';
 const NEW_PER_SESSION = 20;
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  // cache: 'reload' — свежие файлы с сервера, иначе браузер может подмешать старые из своего кеша
+  e.waitUntil(caches.open(CACHE)
+    .then((c) => c.addAll(SHELL.map((u) => new Request(u, { cache: 'reload' }))))
+    .then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (e) => {

@@ -59,6 +59,9 @@ const Listen = {
       voiceRu: TTS_VOICES.ru[0].id, voiceEn: TTS_VOICES.en[0].id,
     };
     try { this.cfg = { ...def, ...JSON.parse(lsGet(LS_LISTEN, '{}')) }; } catch { this.cfg = def; }
+    // голос, которого больше нет в списке (например, Дмитрий), заменяем первым доступным
+    if (!TTS_VOICES.ru.some((v) => v.id === this.cfg.voiceRu)) this.cfg.voiceRu = def.voiceRu;
+    if (!TTS_VOICES.en.some((v) => v.id === this.cfg.voiceEn)) this.cfg.voiceEn = def.voiceEn;
   },
   saveCfg() { lsSet(LS_LISTEN, JSON.stringify(this.cfg)); },
   kind() { return this.deck.type === 'poem' || this.deck.type === 'topic' ? this.deck.type : 'words'; },
@@ -168,7 +171,7 @@ const Listen = {
     const k = this.kind();
     this.items = this.cards.map((c, idx) => {
       const segs = k === 'words' ? this.wordsItem(c) : k === 'poem' ? this.poemItem(c, idx) : this.topicItem(c, idx);
-      return segs.filter((s) => s.text).map((s) => {
+      return segs.filter((s) => s.text && isSpeakable(s.text)).map((s) => {
         const voice = s.lang === 'en' ? this.cfg.voiceEn : this.cfg.voiceRu;
         return { ...s, voice, k: Tts.key(this.deck.id, voice, s.text) };
       });
@@ -207,28 +210,7 @@ const Listen = {
   },
 
   topicItem(card, idx) {
-    const segs = [];
-    const ex = card.extra || {};
-    if (idx === 0) segs.push({ text: cleanSpeech(this.deck.title), lang: 'ru', pause: PAUSE_TITLE, view: 'deck', kind: 'title' });
-    segs.push({ text: cleanSpeech(ex.title || `Раздел ${idx + 1}`), lang: 'ru', pause: PAUSE_TITLE, view: 'title', kind: 'title' });
-    const add = (text) => {
-      String(text || '').split(/\n\s*\n/).forEach((para) => {
-        para.split('\n').map((l) => l.trim()).filter(Boolean).forEach((line, li, lines) => {
-          splitPhrases(line, PAUSE_PROSE).forEach((p, n, all) => {
-            const last = n === all.length - 1;
-            const paraEnd = last && li === lines.length - 1;
-            segs.push({ ...p, pause: p.pause + (paraEnd ? PAUSE_PARA : 0), lang: 'ru', view: `s${segs.length}`, kind: 'text', br: paraEnd ? 2 : last ? 1 : 0 });
-          });
-        });
-      });
-    };
-    const points = Array.isArray(ex.points) ? ex.points : [];
-    add(card.ru || points.join('.\n'));
-    if (this.cfg.points && card.ru && points.length) {
-      segs.push({ text: 'Главное.', lang: 'ru', pause: PAUSE_PROSE.end, view: 'mainhead', kind: 'sub' });
-      add(points.map((p) => (/[.!?…]$/.test(p.trim()) ? p : `${p}.`)).join('\n'));
-    }
-    return segs;
+    return topicSegments(idx === 0 ? this.deck.title : '', card, idx, this.cfg.points);
   },
 
   // ──── Отрисовка текущей карточки ────
@@ -296,7 +278,11 @@ const Listen = {
     const done = await Tts.prepare(this.deck.id, this.missingJobs());
     if (!this.active) return;
     await this.refreshEngine();
-    if (done) toast('🔊 Аудио готово — можно слушать с заблокированным экраном');
+    if (done) {
+      const n = Tts.lastSilent;
+      toast(n ? `🔊 Аудио готово. Не озвучено ${n} ${plural(n, 'фраза', 'фразы', 'фраз')} — вместо них пауза`
+        : '🔊 Аудио готово — можно слушать с заблокированным экраном');
+    }
   },
 
   // ──── Аудио: склейка в один файл ────
@@ -540,6 +526,97 @@ const Listen = {
   },
 };
 
+// ──── Отрезки раздела темы: [название темы], заголовок раздела, исходный текст, [тезисы] ────
+function topicSegments(deckTitle, card, idx, withPoints) {
+  const segs = [];
+  const ex = card.extra || {};
+  if (deckTitle) segs.push({ text: cleanSpeech(deckTitle), lang: 'ru', pause: PAUSE_TITLE, view: 'deck', kind: 'title' });
+  segs.push({ text: cleanSpeech(ex.title || `Раздел ${idx + 1}`), lang: 'ru', pause: PAUSE_TITLE, view: 'title', kind: 'title' });
+  const add = (text) => {
+    String(text || '').split(/\n\s*\n/).forEach((para) => {
+      para.split('\n').map((l) => l.trim()).filter(Boolean).forEach((line, li, lines) => {
+        splitPhrases(line, PAUSE_PROSE).forEach((p, n, all) => {
+          const last = n === all.length - 1;
+          const paraEnd = last && li === lines.length - 1;
+          segs.push({ ...p, pause: p.pause + (paraEnd ? PAUSE_PARA : 0), lang: 'ru', view: `s${segs.length}`, kind: 'text', br: paraEnd ? 2 : last ? 1 : 0 });
+        });
+      });
+    });
+  };
+  const points = Array.isArray(ex.points) ? ex.points : [];
+  add(card.ru || points.join('.\n'));
+  if (withPoints && card.ru && points.length) {
+    segs.push({ text: 'Главное.', lang: 'ru', pause: PAUSE_PROSE.end, view: 'mainhead', kind: 'sub' });
+    add(points.map((p) => (/[.!?…]$/.test(p.trim()) ? p : `${p}.`)).join('\n'));
+  }
+  return segs.filter((x) => x.text && isSpeakable(x.text));
+}
+
+// ──── Чтение одного раздела (кнопка 🔊 в «Темах → Изучение») ────
+// Нейроголос, если аудио темы подготовлено в плеере; иначе голос телефона.
+const Reader = {
+  token: 0,
+  el: null,
+  url: '',
+  onState: null,
+
+  isOn() { return !!this.onState; },
+
+  async read(deck, card, idx, onState) {
+    this.stop();
+    const tok = ++this.token;
+    this.onState = onState;
+    onState(true);
+    const cfg = Listen.cfg || (Listen.loadCfg(), Listen.cfg);
+    const segs = topicSegments('', card, idx, false).map((x) => ({ ...x, k: Tts.key(deck.id, cfg.voiceRu, x.text) }));
+    try { await Tts.load(deck.id); } catch (err) { console.warn('tts load', err); }
+    if (tok !== this.token) return;
+    if (segs.every((x) => Tts.has(x.k))) {
+      try {
+        const res = await Tts.mix([segs.map((x) => ({ k: x.k, pause: x.pause }))]);
+        if (tok !== this.token) return;
+        this.url = URL.createObjectURL(res.blob);
+        this.el = new Audio(this.url);
+        this.el.playbackRate = cfg.speed || 1;
+        this.el.onended = () => { if (tok === this.token) this.stop(); };
+        await this.el.play();
+        return;
+      } catch (err) { console.warn('reader audio', err); }
+    }
+    if (!('speechSynthesis' in window)) { toast('Озвучка не поддерживается браузером'); this.stop(); return; }
+    this.speakFrom(segs, 0, tok, cfg.speed || 1);
+  },
+
+  speakFrom(segs, n, tok, mul) {
+    if (tok !== this.token) return;
+    if (n >= segs.length) { this.stop(); return; }
+    const seg = segs[n];
+    const u = Speech.utter(seg.text, 'ru', mul);
+    let next = false;
+    const go = () => {
+      if (next || tok !== this.token) return;
+      next = true;
+      clearTimeout(guard);
+      setTimeout(() => this.speakFrom(segs, n + 1, tok, mul), seg.pause / mul);
+    };
+    const guard = setTimeout(go, (WATCHDOG_BASE_MS + seg.text.length * WATCHDOG_PER_CHAR_MS) / mul);
+    u.onend = go;
+    u.onerror = go;
+    this.utter = u;
+    speechSynthesis.speak(u);
+  },
+
+  stop() {
+    this.token += 1;
+    if (this.el) { this.el.pause(); this.el = null; }
+    if (this.url) { URL.revokeObjectURL(this.url); this.url = ''; }
+    if ('speechSynthesis' in window) speechSynthesis.cancel();
+    const cb = this.onState;
+    this.onState = null;
+    if (cb) cb(false);
+  },
+};
+
 // ──── Подготовка текста для синтезатора ────
 // Убираем эмодзи и разметку, оставляем знаки препинания — по ним строится интонация.
 function cleanSpeech(s) {
@@ -565,10 +642,30 @@ function phrasePause(text, table) {
 function splitPhrases(line, table) {
   const text = cleanSpeech(line);
   if (!text) return [];
-  const parts = text.split(/(?<=[.!?…]["»”')]*)\s+(?=[A-ZА-ЯЁ«"(—–])/u);
+  const raw = text.split(/(?<=[.!?…]["»”')]*)\s+(?=[A-ZА-ЯЁ«"(—–])/u);
+  // номер пункта («1.», «2.17.3.»), инициалы («Д.И.») и обрывки без слов приклеиваем к следующей фразе
+  const parts = [];
+  raw.forEach((p) => {
+    const prev = parts[parts.length - 1];
+    if (prev !== undefined && isFragment(prev)) parts[parts.length - 1] = `${prev} ${p}`;
+    else parts.push(p);
+  });
+  // висящий хвост («(3)» после формулы) — к предыдущей фразе
+  if (parts.length > 1 && isFragment(parts[parts.length - 1])) parts.splice(-2, 2, `${parts[parts.length - 2]} ${parts[parts.length - 1]}`);
   const out = [];
-  parts.forEach((p) => splitLong(p).forEach((q) => out.push({ text: q, pause: phrasePause(q, table) })));
+  parts.forEach((p) => splitLong(p).forEach((q) => { if (isSpeakable(q)) out.push({ text: q, pause: phrasePause(q, table) }); }));
   return out;
+}
+
+// фраза без единого слова из 3+ букв или оканчивающаяся инициалом — не самостоятельное предложение
+const ABBREV_RE = /(^|[\s(«])(им|г|гг|т|п|пп|ст|рис|табл|ул|см|стр|д|др|пр|гл|разд|кв|ед|тыс|млн|руб|т\.е|т\.д|т\.п|т\.к)\.$/iu;
+function isFragment(t) {
+  return !/[A-Za-zА-Яа-яЁё]{3,}/u.test(t) || /(^|[\s.])[A-ZА-ЯЁ]\.$/u.test(t) || ABBREV_RE.test(t);
+}
+
+// есть ли что произносить: хотя бы одна буква или цифра
+function isSpeakable(t) {
+  return /[A-Za-zА-Яа-яЁё0-9]/u.test(t);
 }
 
 function splitLong(text) {

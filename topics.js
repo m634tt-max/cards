@@ -206,9 +206,13 @@ Object.assign(Topics, {
         <button class="btn" id="btnSpeak">🔊</button>
         <button class="btn primary" id="btnNext">Дальше →</button></div>`;
     $('#tcard').onclick = (e) => { if (e.target.closest('details')) return; st.open = !st.open; this.draw(); };
-    $('#btnSpeak').onclick = () => Speech.sayRu(`${this.titleOf(c, st.i)}. ${this.points(c).join('. ') || c.ru}`);
-    $('#btnPrev').onclick = () => { st.i -= 1; st.open = false; this.draw(); };
-    $('#btnNext').onclick = () => { st.i += 1; st.open = false; this.draw(); };
+    // 🔊 — заголовок и весь исходный текст раздела; повторное нажатие — стоп
+    const speakBtn = $('#btnSpeak');
+    const mark = (on) => { if (speakBtn.isConnected) { speakBtn.textContent = on ? '⏹' : '🔊'; speakBtn.classList.toggle('primary', on); } };
+    speakBtn.onclick = () => { if (Reader.isOn()) Reader.stop(); else Reader.read(this.deck, c, st.i, mark); };
+    if (Reader.isOn()) { Reader.onState = mark; mark(true); }   // карточку перевернули во время чтения
+    $('#btnPrev').onclick = () => { Reader.stop(); st.i -= 1; st.open = false; this.draw(); };
+    $('#btnNext').onclick = () => { Reader.stop(); st.i += 1; st.open = false; this.draw(); };
     attachSwipe($('#tcard'), () => $('#btnNext').click(), () => { if (st.i > 0) $('#btnPrev').click(); });
   },
 

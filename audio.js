@@ -7,7 +7,7 @@
 const TTS_VOICES = {
   ru: [
     { id: 'ru-RU-SvetlanaNeural', label: 'Светлана' },
-    { id: 'ru-RU-DmitryNeural', label: 'Дмитрий' },
+    // ru-RU-DmitryNeural убран: с октября 2026 сервис обрывает соединение (1006) без звука
   ],
   en: [
     { id: 'en-US-JennyNeural', label: 'Jenny 🇺🇸' },
@@ -20,6 +20,8 @@ const TTS_PARALLEL = 2;              // одновременных запрос�
 const TTS_FAIL_LIMIT = 3;            // столько ошибок подряд без успехов — останавливаемся
 const MIX_RATE = 24000;              // частота склейки, Гц (как у озвучки сервера)
 const WAV_HEADER_BYTES = 44;
+const SILENT_SEC = 0.3;              // тишина вместо фразы, которую сервис так и не озвучил
+const NO_SOUND_RE = /не вернул звук/i;
 const PCM_MAX = 32767;
 
 const Tts = {
@@ -28,6 +30,7 @@ const Tts = {
   blobs: new Map(),      // ключ → Blob mp3 (текущая колода)
   decoded: new Map(),    // ключ → Float32Array PCM
   deckId: '',
+  lastSilent: 0,
 
   key(deckId, voice, text) { return `${deckId}|${voice}|${text}`; },
 
@@ -71,6 +74,7 @@ const Tts = {
     this.busy = true;
     this.cancelled = false;
     let ok = 0, fails = 0, streak = 0, next = 0, firstError = '';
+    const silent = [];
     Sheet.open(`<h3>🔊 Подготовка аудио</h3>
       <p class="subtitle" id="ttsStatus">Фраза 0 из ${jobs.length}</p>
       <div class="bar" style="height:10px"><i id="ttsBar" style="width:0%;background:var(--accent)"></i></div>
@@ -83,7 +87,16 @@ const Tts = {
         const job = jobs[next];
         next += 1;
         try {
-          const blob = await this.fetchOne(job.text, job.voice);
+          let blob;
+          try { blob = await this.fetchOne(job.text, job.voice); } catch (err) {
+            if (!NO_SOUND_RE.test(err.message)) throw err;
+            // сервис иногда отвечает без звука — пробуем ещё раз, потом ставим тишину, чтобы колода не застряла
+            try { blob = await this.fetchOne(job.text, job.voice); } catch (err2) {
+              if (!NO_SOUND_RE.test(err2.message)) throw err2;
+              blob = silentWav();
+              silent.push(job.text);
+            }
+          }
           await DB.put('audio', { k: job.k, deckId, blob });
           this.blobs.set(job.k, blob);
           ok += 1; streak = 0;
@@ -110,6 +123,7 @@ const Tts = {
       return false;
     }
     if (Sheet.isOpen()) { Sheet.after = () => {}; Sheet.close(); }
+    this.lastSilent = silent.length;   // сколько фраз заменено тишиной — покажет плеер
     return ok + fails === jobs.length;
   },
 
@@ -163,4 +177,9 @@ function encodeWav(parts, samples) {
     }
   });
   return new Blob([buf], { type: 'audio/wav' });
+}
+
+// короткая тишина в формате WAV (подставляется вместо неозвученной фразы)
+function silentWav() {
+  return encodeWav([Math.round(MIX_RATE * SILENT_SEC)], Math.round(MIX_RATE * SILENT_SEC));
 }
