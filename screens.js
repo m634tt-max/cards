@@ -114,6 +114,7 @@ const Screens = {
         <button class="btn primary" id="btnStudy" ${todo ? '' : 'disabled'}>Учить${todo ? ` (${todo})` : ''}</button>
         <button class="btn" id="btnBrowse">Просмотр всех</button>
       </div>
+      <button class="btn block listen-btn" id="btnListen">🎧 Слушать колоду</button>
       <div class="deck-actions">
         <button id="btnDeckImages">🖼 Картинки</button>
         <button id="btnDeckMenu">✏️ Изменить</button>
@@ -124,6 +125,7 @@ const Screens = {
       <div class="panel">${rows}</div>`;
     $('#btnStudy').onclick = () => navigate('study', { deckIds: [deckId], mode: 'srs' });
     $('#btnBrowse').onclick = () => navigate('study', { deckIds: [deckId], mode: 'browse' });
+    $('#btnListen').onclick = () => navigate('listen', { deckId });
     $('#btnDeckMenu').onclick = () => Screens.deckMenu(deck);
     $('#btnDeckImages').onclick = () => navigate('images', { deckId });
     $('#btnDeckExport').onclick = () => Importer.exportDeck(deck.id).catch((e) => reportError('export', e));

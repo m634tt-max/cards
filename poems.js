@@ -93,6 +93,7 @@ const Poems = {
         <button class="btn import" id="btnAddImages">Добавить</button></div>` : ''}
       <p class="subtitle">${esc(deck.author || '')}${deck.author ? ' · ' : ''}${cards.length} ${plural(cards.length, 'кусочек', 'кусочка', 'кусочков')}
         ${this.reviewLabel(pr) ? `<br><b>${this.reviewLabel(pr)}</b>` : ''}</p>
+      <button class="btn block listen-btn" id="btnListen">🎧 Слушать стих</button>
       <div class="panel">${rows}</div>
       <div class="deck-actions" style="margin-top:14px">
         <button id="btnPoemText">📜 Весь текст</button>
@@ -102,6 +103,7 @@ const Poems = {
       </div>`;
     if (noImg) $('#btnAddImages').onclick = () => navigate('images', { deckId });
     $('#view').querySelectorAll('[data-mode]').forEach((b) => { b.onclick = () => navigate('poemMode', { deckId, mode: b.dataset.mode }); });
+    $('#btnListen').onclick = () => navigate('listen', { deckId });
     $('#btnPoemText').onclick = () => this.showText(deck, cards);
     $('#btnPoemEdit').onclick = () => this.editList(cards);
     $('#btnPoemImages').onclick = () => navigate('images', { deckId });
@@ -123,8 +125,9 @@ const Poems = {
   showText(deck, cards) {
     const text = cards.sort((a, b) => a.idx - b.idx).map((c) => esc(c.ru)).join('\n');
     Sheet.open(`<h3>${esc(deck.title)}</h3><div class="poem-full">${text}</div>
-      <div class="btn-row"><button class="btn" id="btnSayAll">🔊 Прочитать</button></div>`);
-    $('#btnSayAll').onclick = () => Speech.sayRu(cards.map((c) => c.ru).join('\n'));
+      <div class="btn-row"><button class="btn" id="btnSayAll">🎧 Слушать</button></div>`);
+    // после закрытия окна открываем плеер (переход запускается из обработчика «Назад»)
+    $('#btnSayAll').onclick = () => { Sheet.after = () => navigate('listen', { deckId: deck.id }); Sheet.close(); };
   },
 
   // ──── Запуск режима ────

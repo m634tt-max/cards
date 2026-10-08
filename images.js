@@ -250,8 +250,9 @@ const ImageGen = {
   // ──── Настройки генерации ────
   settings() {
     const c = this.cfg();
-    Sheet.open(`<h3>✨ Генерация картинок</h3>
-      <p class="subtitle">Картинки рисует ваш сервер Cloudflare (модель FLUX, бесплатно — около сотни картинок в день).</p>
+    Sheet.open(`<h3>✨ Генерация картинок и озвучка</h3>
+      <p class="subtitle">Картинки рисует ваш сервер Cloudflare (модель FLUX, бесплатно — около сотни картинок в день).
+        Он же готовит озвучку нейроголосом для режима «🎧 Слушать».</p>
       <label class="field"><span>Адрес сервера</span><input id="genUrl" value="${esc(c.url)}"></label>
       <label class="field"><span>Токен генерации (если задан на сервере)</span><input id="genToken" value="${esc(c.token)}"></label>
       <p class="subtitle" id="genCheck"></p>
@@ -262,7 +263,9 @@ const ImageGen = {
       out.textContent = 'Проверяю…';
       try {
         const r = await (await fetch(`${read().url.replace(/\/+$/, '')}/image/check`)).json();
-        out.textContent = r.ai ? `✅ Генерация подключена${r.tokenRequired ? ' (нужен токен)' : ''}` : '⚠️ На сервере не подключён Workers AI';
+        const img = r.ai ? `✅ Картинки подключены${r.tokenRequired ? ' (нужен токен)' : ''}` : '⚠️ Картинки: не подключён Workers AI';
+        const tts = r.tts ? '✅ Озвучка подключена' : '⚠️ Озвучки нет — обновите код сервера (worker.js версии 4)';
+        out.innerHTML = `${img}<br>${tts}`;
       } catch (err) { out.textContent = `Ошибка: ${err.message} — обновите код сервера (см. инструкцию)`; }
     };
     $('#genSave').onclick = () => { this.saveCfg(read()); Sheet.close(); toast('Сохранено'); };

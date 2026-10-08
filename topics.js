@@ -80,6 +80,7 @@ const Topics = {
         <div class="hint">Сгенерируйте или выберите из галереи</div></div>
         <button class="btn import" id="btnAddImages">Добавить</button></div>` : ''}
       <p class="subtitle">${esc(deck.author || '')}${deck.author ? ' · ' : ''}${cards.length} ${plural(cards.length, 'раздел', 'раздела', 'разделов')} · выучено ${s.learned}</p>
+      <button class="btn block listen-btn" id="btnListen">🎧 Слушать тему</button>
       <div class="panel">${rows}</div>
       <div class="deck-actions" style="margin-top:14px">
         <button id="btnTopicImages">🖼 Картинки</button>
@@ -87,6 +88,7 @@ const Topics = {
         <button id="btnTopicDel" class="del">🗑 Удалить тему</button>
       </div>`;
     if (noImg) $('#btnAddImages').onclick = () => navigate('images', { deckId });
+    $('#btnListen').onclick = () => navigate('listen', { deckId });
     $('#btnTopicImages').onclick = () => navigate('images', { deckId });
     $('#btnTopicExport').onclick = () => Importer.exportDeck(deckId).catch((e) => reportError('export', e));
     $('#btnTopicDel').onclick = () => Screens.deleteDeck(deck);

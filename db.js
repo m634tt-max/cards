@@ -5,9 +5,10 @@
 // profiles : { id, name, emoji, kid, reverse, autoSpeak, createdAt }
 // poemProgress : { pk: "<profileId>|<deckId>", profileId, deckId, stars{}, reviews, nextReview, last }
 // progress : { pk: "<profileId>|<cardKey>", profileId, deckId, cardKey, due, interval, ease, reps, lapses, last }
+// audio    : { k: "<deckId>|<голос>|<текст>", deckId, blob }  озвучка нейроголосом (в резервную копию не входит)
 
 const DB_NAME = 'flashcards';
-const DB_VERSION = 2;   // 2 — добавлен прогресс стихов
+const DB_VERSION = 3;   // 2 — прогресс стихов, 3 — озвучка
 
 const DB = (() => {
   let dbPromise = null;
@@ -31,8 +32,18 @@ const DB = (() => {
           s.createIndex('profileId', 'profileId');
           s.createIndex('profileDeck', ['profileId', 'deckId']);
         }
+        if (!db.objectStoreNames.contains('audio')) {
+          const s = db.createObjectStore('audio', { keyPath: 'k' });
+          s.createIndex('deckId', 'deckId');
+        }
       };
-      req.onsuccess = () => resolve(req.result);
+      // другая вкладка или service worker держит старую версию базы — закрываемся и ждём
+      req.onblocked = () => console.warn('IndexedDB: обновление базы ждёт закрытия других вкладок');
+      req.onsuccess = () => {
+        const db = req.result;
+        db.onversionchange = () => db.close();
+        resolve(db);
+      };
       req.onerror = () => reject(req.error);
     });
     return dbPromise;
@@ -69,8 +80,12 @@ const DB = (() => {
   async function deleteDeck(deckId) {
     const db = await open();
     return new Promise((res, rej) => {
-      const tx = db.transaction(['decks', 'cards', 'progress'], 'readwrite');
+      const tx = db.transaction(['decks', 'cards', 'progress', 'audio'], 'readwrite');
       tx.objectStore('decks').delete(deckId);
+      tx.objectStore('audio').index('deckId').openKeyCursor(IDBKeyRange.only(deckId)).onsuccess = (e) => {
+        const c = e.target.result;
+        if (c) { tx.objectStore('audio').delete(c.primaryKey); c.continue(); }
+      };
       tx.objectStore('cards').index('deckId').openKeyCursor(IDBKeyRange.only(deckId)).onsuccess = (e) => {
         const c = e.target.result;
         if (c) { tx.objectStore('cards').delete(c.primaryKey); c.continue(); }

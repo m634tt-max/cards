@@ -1,6 +1,6 @@
 'use strict';
 // ──── Константы ────
-const APP_VERSION = '1.5.0';
+const APP_VERSION = '1.7.0';
 const DECK_FORMAT_VERSION = 1;
 const BACKUP_FORMAT_VERSION = 1;
 const TOAST_MS = 2600;
@@ -161,26 +161,26 @@ const Speech = {
       || this.voices.find((v) => /en[-_](US|GB)/i.test(v.lang))
       || this.voices[0] || null;
   },
+  pickRu() { return this.ruVoices.find((x) => /google/i.test(x.name)) || this.ruVoices[0] || null; },
+  // фраза с нужным голосом: lang 'en' или 'ru', rateMul — множитель к скорости из «Ещё»
+  utter(text, lang = 'en', rateMul = 1) {
+    const u = new SpeechSynthesisUtterance(text);
+    const v = lang === 'ru' ? this.pickRu() : this.pick();
+    if (v) u.voice = v;
+    u.lang = v ? v.lang : (lang === 'ru' ? 'ru-RU' : 'en-US');
+    u.rate = (Number(lsGet(LS_RATE, DEFAULT_RATE)) || DEFAULT_RATE) * rateMul;
+    return u;
+  },
   say(text) {
     if (!('speechSynthesis' in window)) { toast('Озвучка не поддерживается браузером'); return; }
     speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    const v = this.pick();
-    if (v) u.voice = v;
-    u.lang = v ? v.lang : 'en-US';
-    u.rate = Number(lsGet(LS_RATE, DEFAULT_RATE)) || DEFAULT_RATE;
-    speechSynthesis.speak(u);
+    speechSynthesis.speak(this.utter(text, 'en'));
   },
-  // ──── Русская речь (для стихов) ────
+  // ──── Русская речь (для стихов и тем) ────
   sayRu(text) {
     if (!('speechSynthesis' in window)) { toast('Озвучка не поддерживается браузером'); return; }
     speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    const v = this.ruVoices.find((x) => /google/i.test(x.name)) || this.ruVoices[0];
-    if (v) u.voice = v;
-    u.lang = v ? v.lang : 'ru-RU';
-    u.rate = Number(lsGet(LS_RATE, DEFAULT_RATE)) || DEFAULT_RATE;
-    speechSynthesis.speak(u);
+    speechSynthesis.speak(this.utter(text, 'ru'));
   },
 };
 
@@ -280,7 +280,8 @@ window.addEventListener('popstate', (e) => {
 async function render() {
   const { screen, params } = App.route;
   const isTab = screen in TAB_TITLES;
-  document.body.classList.toggle('studying', ['study', 'poemMode', 'topicMode'].includes(screen));
+  if (typeof Listen !== 'undefined' && Listen.active && screen !== 'listen') Listen.stop();
+  document.body.classList.toggle('studying', ['study', 'poemMode', 'topicMode', 'listen'].includes(screen));
   $('#btnBack').hidden = isTab;
   $('#btnProfile').hidden = screen === 'study';
   document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === screen));
@@ -300,6 +301,7 @@ async function render() {
     else if (screen === 'topics') await Topics.list();
     else if (screen === 'topic') await Topics.screen(params.deckId);
     else if (screen === 'topicMode') await Topics.mode(params);
+    else if (screen === 'listen') await Listen.screen(params);
   } catch (err) { reportError('render', err); }
 }
 

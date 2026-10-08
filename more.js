@@ -33,7 +33,7 @@ Object.assign(Screens, {
       <div class="panel">
         <button class="row" id="btnReminders"><span class="grow">🔔 Напоминания о занятиях
           <div class="hint" id="remSummary">${esc(Reminders.summary())}</div></span>${CHEVRON}</button>
-        <button class="row" id="btnGenSettings"><span class="grow">✨ Генерация картинок
+        <button class="row" id="btnGenSettings"><span class="grow">✨ Генерация картинок и озвучка
           <div class="hint">Сервер Cloudflare, токен, проверка</div></span>${CHEVRON}</button>
       </div>
 

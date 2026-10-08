@@ -1,10 +1,10 @@
 'use strict';
 // ──── Service worker: офлайн-кеш и push-напоминания ────
 // При изменении файлов приложения увеличьте номер версии — телефон скачает обновление.
-const CACHE = 'cards-v1.5.0';
+const CACHE = 'cards-v1.7.0';
 const SHELL = [
   './', 'index.html', 'app.css', 'db.js', 'srs.js', 'app.js', 'importer.js', 'screens.js',
-  'more.js', 'study.js', 'reminders.js', 'images.js', 'poems.js', 'topics.js', 'main.js', 'vendor/jszip.min.js',
+  'more.js', 'study.js', 'reminders.js', 'images.js', 'poems.js', 'topics.js', 'audio.js', 'listen.js', 'main.js', 'vendor/jszip.min.js',
   'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png',
 ];
 const DB_NAME = 'flashcards';
