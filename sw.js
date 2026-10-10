@@ -1,7 +1,7 @@
 'use strict';
 // ──── Service worker: офлайн-кеш и push-напоминания ────
 // При изменении файлов приложения увеличьте номер версии — телефон скачает обновление.
-const CACHE = 'cards-v1.7.3';
+const CACHE = 'cards-v1.8.0';
 const SHELL = [
   './', 'index.html', 'app.css', 'db.js', 'srs.js', 'app.js', 'importer.js', 'screens.js',
   'more.js', 'study.js', 'reminders.js', 'images.js', 'poems.js', 'topics.js', 'audio.js', 'listen.js', 'main.js', 'vendor/jszip.min.js',
