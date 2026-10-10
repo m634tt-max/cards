@@ -281,7 +281,8 @@ a.btn { text-decoration: none; color: inherit; }
 .poem-lines.letters { letter-spacing: .25em; color: var(--accent-text); }
 mark.rhyme { background: #fff3b0; color: #111; border-radius: 4px; padding: 0 2px; }
 .poem-task { font-size: 1.1em; margin: 4px 0 14px; }
-.poem-strip, .poem-table { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.poem-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.poem-table { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
 .poem-cell { position: relative; display: flex; flex-direction: column; justify-content: flex-start; align-self: start; text-align: left; }
 .poem-cell > span { position: absolute; top: 6px; left: 6px; background: rgba(255,255,255,.9); color: #2a2622;
   border-radius: 50%; width: 26px; height: 26px; display: grid; place-items: center; font-weight: 800; font-size: .85em; }
@@ -375,3 +376,22 @@ mark.term { background: var(--accent-soft); color: #111; border-radius: 4px; pad
 .ls-status { flex-wrap: wrap; }
 .ls-status .grow { flex: 1 1 100%; text-align: center; }
 .ls-status .btn { flex: 1 1 100%; padding: 10px 12px; font-size: .95em; }
+
+/* ──── Стихи: крупные картинки ──── */
+.poem-front .pic { flex: 1 1 50%; }
+.poem-front-text { flex: 1 1 50%; min-height: 0; overflow-y: auto; padding: 14px 18px 16px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.poem-front-text .poem-lines { text-align: center; color: #2a2622; font-size: 1.25em; }
+.poem-front .speak, .poem-cell .speak { margin-top: auto; width: 60px; height: 60px; border-radius: 50%; background: #e3ffff; color: #2a8c99; display: grid; place-items: center; flex: none; }
+.poem-front .speak svg { width: 28px; height: 28px; }
+.speak.on, .btn.on { background: var(--accent); color: var(--accent-ink); }
+.face.back.poem-back { padding: 0; background: #f3ebe3; }
+.poem-back .pic { flex: 1; width: 100%; min-height: 0; background: center/contain no-repeat; }
+.poem-back-hint { padding: 10px; font-size: .9em; color: #7a716a; }
+.poem-feed { display: flex; flex-direction: column; gap: 16px; }
+.poem-feed .poem-cell { width: 100%; align-self: stretch; }
+.poem-big { width: 100%; aspect-ratio: 1; border-radius: 20px; background: #ddd center/cover no-repeat; box-shadow: var(--shadow); }
+.poem-feed .poem-cell > span, .poem-table .poem-cell > span { font-size: 1.1em; min-width: 34px; height: 34px; top: 10px; left: 10px; }
+.poem-feed .poem-lines { margin: 10px 4px 0; font-size: 1.2em; }
+.poem-feed .poem-lines.letters { font-size: 1.35em; }
+.poem-actions { position: sticky; bottom: 0; background: var(--bg); padding: 4px 0 8px; margin-top: 8px; }
+.poem-table .poem-lines.small { font-size: .9em; }
