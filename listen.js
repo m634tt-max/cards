@@ -552,58 +552,113 @@ function topicSegments(deckTitle, card, idx, withPoints) {
   return segs.filter((x) => x.text && isSpeakable(x.text));
 }
 
-// ──── Чтение одного раздела (кнопка 🔊 в «Темах → Изучение») ────
-// Нейроголос, если аудио темы подготовлено в плеере; иначе голос телефона.
+// ──── Отрезки кусочка стиха: строка за строкой, паузы по знакам в конце строк ────
+function poemSegments(text) {
+  const segs = [];
+  String(text || '').split('\n').map((l) => l.trim()).filter(Boolean).forEach((line) => {
+    splitPhrases(line, PAUSE_VERSE).forEach((p) => segs.push({ ...p, lang: 'ru' }));
+  });
+  return segs;
+}
+
+// ──── Кнопка 🔊 с паузой (Темы → Изучение, Стихи) ────
+// Первое нажатие — читать, второе — пауза, третье — продолжить с того же места.
+// Нейроголос, если аудио колоды подготовлено в плеере «🎧 Слушать»; иначе голос телефона.
+// onState получает 'playing' | 'paused' | 'stopped'.
 const Reader = {
+  key: '',
+  segs: [],
+  n: 0,              // голос телефона: номер текущей фразы
+  state: 'stopped',
   token: 0,
   el: null,
   url: '',
+  mul: 1,
   onState: null,
 
-  isOn() { return !!this.onState; },
+  isOn() { return this.state !== 'stopped'; },
+  is(key) { return this.key === key && this.isOn(); },
 
-  async read(deck, card, idx, onState) {
-    this.stop();
-    const tok = ++this.token;
+  set(state) {
+    this.state = state;
+    if (this.onState) this.onState(state);
+  },
+
+  // повторно привязать кнопку после перерисовки экрана
+  bind(key, onState) {
+    if (this.key !== key) return;
     this.onState = onState;
-    onState(true);
+    onState(this.state);
+  },
+
+  async toggle(key, deckId, segs, onState) {
+    if (this.key === key && this.state === 'playing') { this.pause(); return; }
+    if (this.key === key && this.state === 'paused') { this.onState = onState; this.resume(); return; }
+    this.stop();
     const cfg = Listen.cfg || (Listen.loadCfg(), Listen.cfg);
-    const segs = topicSegments('', card, idx, false).map((x) => ({ ...x, k: Tts.key(deck.id, cfg.voiceRu, x.text) }));
-    try { await Tts.load(deck.id); } catch (err) { console.warn('tts load', err); }
+    this.key = key;
+    this.onState = onState;
+    this.mul = cfg.speed || 1;
+    this.segs = segs.filter((x) => x.text).map((x) => ({ ...x, k: Tts.key(deckId, cfg.voiceRu, x.text) }));
+    this.n = 0;
+    const tok = ++this.token;
+    this.set('playing');
+    try { await Tts.load(deckId); } catch (err) { console.warn('tts load', err); }
     if (tok !== this.token) return;
-    if (segs.every((x) => Tts.has(x.k))) {
+    if (this.segs.length && this.segs.every((x) => Tts.has(x.k))) {
       try {
-        const res = await Tts.mix([segs.map((x) => ({ k: x.k, pause: x.pause }))]);
+        const res = await Tts.mix([this.segs.map((x) => ({ k: x.k, pause: x.pause }))]);
         if (tok !== this.token) return;
         this.url = URL.createObjectURL(res.blob);
         this.el = new Audio(this.url);
-        this.el.playbackRate = cfg.speed || 1;
+        this.el.playbackRate = this.mul;
         this.el.onended = () => { if (tok === this.token) this.stop(); };
         await this.el.play();
         return;
-      } catch (err) { console.warn('reader audio', err); }
+      } catch (err) { console.warn('reader audio', err); this.el = null; }
     }
     if (!('speechSynthesis' in window)) { toast('Озвучка не поддерживается браузером'); this.stop(); return; }
-    this.speakFrom(segs, 0, tok, cfg.speed || 1);
+    this.speakFrom(tok);
   },
 
-  speakFrom(segs, n, tok, mul) {
+  // старый вызов из «Тем»: заголовок и весь исходный текст раздела
+  read(deck, card, idx, onState) {
+    return this.toggle(`topic|${card.key}`, deck.id, topicSegments('', card, idx, false), onState);
+  },
+
+  speakFrom(tok) {
     if (tok !== this.token) return;
-    if (n >= segs.length) { this.stop(); return; }
-    const seg = segs[n];
-    const u = Speech.utter(seg.text, 'ru', mul);
+    if (this.n >= this.segs.length) { this.stop(); return; }
+    const seg = this.segs[this.n];
+    const u = Speech.utter(seg.text, 'ru', this.mul);
     let next = false;
     const go = () => {
       if (next || tok !== this.token) return;
       next = true;
       clearTimeout(guard);
-      setTimeout(() => this.speakFrom(segs, n + 1, tok, mul), seg.pause / mul);
+      this.n += 1;
+      setTimeout(() => this.speakFrom(tok), seg.pause / this.mul);
     };
-    const guard = setTimeout(go, (WATCHDOG_BASE_MS + seg.text.length * WATCHDOG_PER_CHAR_MS) / mul);
+    const guard = setTimeout(go, (WATCHDOG_BASE_MS + seg.text.length * WATCHDOG_PER_CHAR_MS) / this.mul);
     u.onend = go;
     u.onerror = go;
     this.utter = u;
     speechSynthesis.speak(u);
+  },
+
+  pause() {
+    if (this.state !== 'playing') return;
+    if (this.el) this.el.pause();
+    else { this.token += 1; if ('speechSynthesis' in window) speechSynthesis.cancel(); }
+    this.set('paused');
+  },
+
+  resume() {
+    if (this.state !== 'paused') return;
+    this.set('playing');
+    if (this.el) { this.el.play().catch((err) => reportError('play', err)); return; }
+    const tok = ++this.token;
+    this.speakFrom(tok);
   },
 
   stop() {
@@ -613,9 +668,26 @@ const Reader = {
     if ('speechSynthesis' in window) speechSynthesis.cancel();
     const cb = this.onState;
     this.onState = null;
-    if (cb) cb(false);
+    this.key = '';
+    this.state = 'stopped';
+    if (cb) cb('stopped');
   },
 };
+
+// значок кнопки по состоянию: ⏸ — идёт чтение, 🔊 — остановлено или пауза
+function speakIcon(btn, state) {
+  if (!btn || !btn.isConnected) return;
+  btn.classList.toggle('on', state === 'playing');
+  btn.classList.toggle('paused', state === 'paused');
+  btn.setAttribute('aria-label', state === 'playing' ? 'Пауза' : state === 'paused' ? 'Продолжить' : 'Озвучить');
+  if (btn.dataset.icon === 'svg') {
+    btn.innerHTML = state === 'playing' ? SVG_PAUSE : SVG_SPEAK;
+  } else {
+    btn.textContent = state === 'playing' ? '⏸ Пауза' : state === 'paused' ? '▶ Продолжить' : (btn.dataset.idle || '🔊');
+  }
+}
+const SVG_SPEAK = '<svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9zM16 9a4 4 0 010 6M18.5 6.5a8 8 0 010 11"/></svg>';
+const SVG_PAUSE = '<svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14" style="stroke-width:3.2"/></svg>';
 
 // ──── Подготовка текста для синтезатора ────
 // Убираем эмодзи и разметку, оставляем знаки препинания — по ним строится интонация.
