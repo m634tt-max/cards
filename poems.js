@@ -201,19 +201,33 @@ const Poems = {
 // ──── Режимы заучивания ────
 Object.assign(Poems, {
 
-  // 1. Знакомство: картинка → нажатие → строки (как карточка)
+  // ──── Кнопка озвучки с паузой ────
+  speakButton(id, svg = false) {
+    return svg ? `<button class="speak" id="${id}" data-icon="svg" aria-label="Озвучить">${SVG_SPEAK}</button>`
+      : `<button class="btn" id="${id}" data-idle="🔊 Слушать" aria-label="Озвучить">🔊 Слушать</button>`;
+  },
+
+  bindSpeak(id, key, text) {
+    const btn = $(`#${id}`);
+    const mark = (state) => speakIcon(btn, state);
+    btn.onclick = (e) => { e.stopPropagation(); Reader.toggle(key, this.deck.id, poemSegments(text), mark); };
+    Reader.bind(key, mark);
+  },
+
+  // 1. Знакомство: лицо — картинка сверху и строки снизу; оборот — только большая картинка
   drawIntro() {
     const st = this.state;
+    Reader.stop();
     if (st.i >= this.cards.length) { this.done('intro', 'Ты познакомился со всем стихом'); return; }
     const c = this.cards[st.i];
     $('#view').innerHTML = `${this.head(st.i + 1, this.cards.length)}
       <div class="stage"><div class="card3d poem-card" id="card">
-        <div class="face front">${this.pic(c, 'pic')}<div class="caption">№ ${st.i + 1}</div>
-          ${st.i === 0 ? '<div class="tap-hint">нажми на картинку</div>' : ''}</div>
-        <div class="face back">${this.pic(c, 'mini')}
-          <div class="poem-lines">${this.rhymeHtml(c.ru)}</div>
-          <button class="speak" id="btnSpeak" aria-label="Озвучить">
-            <svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9zM16 9a4 4 0 010 6M18.5 6.5a8 8 0 010 11"/></svg></button></div>
+        <div class="face front poem-front">${this.pic(c, 'pic')}
+          <div class="poem-front-text"><div class="poem-lines">${this.rhymeHtml(c.ru)}</div>
+            ${this.speakButton('btnSpeak', true)}</div>
+          ${st.i === 0 ? '<div class="tap-hint">нажми — только картинка</div>' : ''}</div>
+        <div class="face back poem-back">${this.pic(c, 'pic')}
+          <div class="poem-back-hint">Расскажи по картинке</div></div>
       </div></div>
       <div class="study-nav">
         <button class="btn" id="btnPrev" ${st.i === 0 ? 'disabled' : ''}>← Назад</button>
@@ -222,47 +236,57 @@ Object.assign(Poems, {
     card.onclick = (e) => {
       if (e.target.closest('.speak')) return;
       card.classList.toggle('flipped');
-      if (card.classList.contains('flipped')) Speech.sayRu(c.ru);
+      if (card.classList.contains('flipped')) Reader.stop();   // на обороте ребёнок рассказывает сам
     };
-    $('#btnSpeak').onclick = (e) => { e.stopPropagation(); Speech.sayRu(c.ru); };
+    this.bindSpeak('btnSpeak', `poem|${c.key}`, c.ru);
     $('#btnPrev').onclick = () => { st.i -= 1; this.draw(); };
     $('#btnNext').onclick = () => { st.i += 1; this.draw(); };
     attachSwipe($('#card'), () => $('#btnNext').click(), () => { if (st.i > 0) $('#btnPrev').click(); });
   },
 
+  // большие картинки лентой: номер на картинке, текст под ней (если нужен)
+  feed(cards, textFn) {
+    return `<div class="poem-feed">${cards.map((c, i) => `<div class="poem-cell" data-i="${i}">${this.pic(c, 'poem-big')}<span>${i + 1}</span>
+      ${textFn ? textFn(c, i) : ''}</div>`).join('')}</div>`;
+  },
+
   // 2. Снежный ком: картинки 1..k, рассказать с начала
   drawBall() {
-    const st = this.state;
+    const st = this.state;   // озвучка не прерывается при «Проверить себя» — кнопка привяжется заново
     const n = this.cards.length;
     const part = this.cards.slice(0, st.k);
     $('#view').innerHTML = `${this.head(st.k, n)}
       <p class="poem-task">Расскажи с самого начала до картинки <b>№ ${st.k}</b></p>
-      <div class="poem-strip">${part.map((c, i) => `<div class="poem-cell">${this.pic(c)}<span>${i + 1}</span>
-        ${st.shown ? `<div class="poem-lines small">${this.rhymeHtml(c.ru)}</div>` : ''}</div>`).join('')}</div>
-      <div class="btn-row"><button class="btn" id="btnShow">${st.shown ? 'Скрыть текст' : '👀 Проверить себя'}</button>
-        <button class="btn" id="btnSayPart">🔊</button></div>
-      <div class="grade two">
-        <button class="btn bad" id="btnAgain">Ещё раз<small>сначала</small></button>
-        <button class="btn good" id="btnOk">Получилось<small>${st.k < n ? '+ кусочек' : 'весь стих!'}</small></button></div>`;
+      ${this.feed(part, (c) => (st.shown ? `<div class="poem-lines">${this.rhymeHtml(c.ru)}</div>` : ''))}
+      <div class="poem-actions">
+        <div class="btn-row"><button class="btn" id="btnShow">${st.shown ? 'Скрыть текст' : '👀 Проверить себя'}</button>
+          ${this.speakButton('btnSayPart')}</div>
+        <div class="grade two">
+          <button class="btn bad" id="btnAgain">Ещё раз<small>сначала</small></button>
+          <button class="btn good" id="btnOk">Получилось<small>${st.k < n ? '+ кусочек' : 'весь стих!'}</small></button></div></div>`;
     $('#btnShow').onclick = () => { st.shown = !st.shown; this.draw(); };
-    $('#btnSayPart').onclick = () => Speech.sayRu(part.map((c) => c.ru).join('\n'));
-    $('#btnAgain').onclick = () => { st.shown = false; this.draw(); };
+    this.bindSpeak('btnSayPart', `ball|${this.deck.id}|${st.k}`, part.map((c) => c.ru).join('\n'));
+    $('#btnAgain').onclick = () => { Reader.stop(); st.shown = false; this.draw(); window.scrollTo(0, 0); };
     $('#btnOk').onclick = () => {
+      Reader.stop();
       if (st.k >= n) { this.done('ball', 'Ты рассказал весь стих снежным комом'); return; }
       st.k += 1; st.shown = false; this.draw();
+      // новая картинка — в конце ленты: показываем её
+      const last = $('#view').querySelector('.poem-feed .poem-cell:last-child');
+      if (last) last.scrollIntoView({ block: 'center' });
     };
   },
 
-  // 3. Первые буквы: нажми на кусочек — откроется полностью
+  // 3. Первые буквы: большие картинки лентой, под каждой — первые буквы; нажатие открывает текст
   drawLetters() {
+    Reader.stop();
     $('#view').innerHTML = `<p class="poem-task">Вспомни строки по первым буквам. Нажми на кусочек, чтобы проверить.</p>
-      ${this.cards.map((c, i) => `<button class="panel poem-row" data-i="${i}">${this.pic(c, 'poem-thumb')}
-        <div class="poem-lines letters" data-full="0">${this.lettersHtml(c.ru)}</div></button>`).join('')}
+      ${this.feed(this.cards, (c) => `<div class="poem-lines letters" data-full="0">${this.lettersHtml(c.ru)}</div>`)}
       <button class="btn primary block" id="btnDone" style="margin-top:12px">Рассказал без подсказок ✓</button>`;
-    $('#view').querySelectorAll('.poem-row').forEach((row) => {
-      row.onclick = () => {
-        const box = row.querySelector('.poem-lines');
-        const c = this.cards[Number(row.dataset.i)];
+    $('#view').querySelectorAll('.poem-feed .poem-cell').forEach((cell) => {
+      cell.onclick = () => {
+        const box = cell.querySelector('.poem-lines');
+        const c = this.cards[Number(cell.dataset.i)];
         const full = box.dataset.full === '1';
         box.innerHTML = full ? this.lettersHtml(c.ru) : this.rhymeHtml(c.ru);
         box.dataset.full = full ? '0' : '1';
@@ -295,7 +319,7 @@ Object.assign(Poems, {
     const st = this.state;
     $('#view').innerHTML = `
       <p class="poem-task">Расскажи весь стих, глядя на картинки. Нажми на картинку — подсказка.</p>
-      <div class="poem-table">${this.cards.map((c, i) => `<button class="poem-cell" data-i="${i}">${this.pic(c)}<span>${i + 1}</span>
+      <div class="poem-table">${this.cards.map((c, i) => `<button class="poem-cell" data-i="${i}">${this.pic(c, 'poem-big')}<span>${i + 1}</span>
         <div class="poem-lines small" ${st.shown ? '' : 'hidden'}>${this.rhymeHtml(c.ru)}</div></button>`).join('')}</div>
       <div class="btn-row"><button class="btn" id="btnAllText">${st.shown ? 'Скрыть текст' : 'Показать текст'}</button>
         <button class="btn" id="btnPrint">🖨 Печать</button></div>
